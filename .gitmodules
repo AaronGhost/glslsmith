@@ -1,0 +1,3 @@
+[submodule "graphicsfuzz"]
+	path = graphicsfuzz
+	url = git@github.com:AaronGhost/graphicsfuzz.git
