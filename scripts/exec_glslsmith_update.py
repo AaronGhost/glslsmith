@@ -29,6 +29,7 @@ def main():
     seed = 0
     if ns.seed != -1:
         seed = ns.seed
+    os.chdir("../")
     while batch_nb == 1 or ns.continuous:
         if not ns.diffonly:
             if not ns.nogeneration:
@@ -76,7 +77,7 @@ def main():
             if validate_compilers:
                 for compiler in compilers:
                     cmd_ending = [exec_dirs.shadertrap, "--show-gl-info",
-                                  "empty.shadertrap"]
+                                  "scripts/empty.shadertrap"]
                     cmd = common.build_env_from_compiler(compiler) + cmd_ending
                     process_return = run(cmd, capture_output=True, text=True)
                     buffers = common.find_buffer_file(os.getcwd())
