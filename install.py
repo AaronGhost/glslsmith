@@ -116,7 +116,7 @@ def main():
     # Dir settings
     dirsettings = config_document.createElement("dirsettings")
     graphicsfuzz = config_document.createElement("graphicsfuzz")
-    graphicsfuzz.appendChild(config_document.createTextNode('./graphicsfuzz'))
+    graphicsfuzz.appendChild(config_document.createTextNode('./graphicsfuzz/'))
     dirsettings.appendChild(graphicsfuzz)
     shadertrap = config_document.createElement("shadertrap")
     shadertrap.appendChild(config_document.createTextNode(shadertrap_dir))

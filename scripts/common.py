@@ -118,5 +118,3 @@ def comparison_helper(files):
         i+= 1
 
     return comparison_values
-
-#print(comparison_helper(["buffer_default_6.txt", "buffer_llvmpipe_6.txt","buffer_swiftshader_6.txt"]))
