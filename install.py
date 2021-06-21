@@ -20,8 +20,8 @@ def main():
 
         execute_with_popen(['git', 'submodule', 'init'])
         execute_with_popen(['git', 'submodule', 'update'])
-        execute_with_popen(["mvn","-Dmaven.test.skip=true","-q", "-am","-pl",":graphicsfuzz", "package"],"./graphicsfuzz")
-        execute_with_popen(["mvn","-Dmaven.test.skip=true","-q", "-pl","glslsmith", "install"],"./graphicsfuzz")
+        #execute_with_popen(["mvn","-Dmaven.test.skip=true","-q", "-am","-pl",":graphicsfuzz", "package"],"./graphicsfuzz")
+        execute_with_popen(["mvn","-Dmaven.test.skip=true","-q", "install"],"./graphicsfuzz")
 
     print('\n[2/4] Configuration of the generator working directories')
     print('Let any directory empty to use the default one which will be created in the project')

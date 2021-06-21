@@ -1,4 +1,6 @@
 import filecmp
+import shutil
+from subprocess import run
 from xml.dom import minidom
 import os
 
@@ -115,6 +117,41 @@ def comparison_helper(files):
                 if filecmp.cmp(reference[0],next_files[0],False):
                     reference += next_files
                     comparison_values.remove(next_files)
-        i+= 1
+        i += 1
 
     return comparison_values
+
+
+def execute_compilation(compilers, shadertrap, shadername, output_seed = "", move_dir = "./", verbose = False):
+    no_compile_errors = []
+    if not os.path.isfile(shadername):
+        print(shadername + " not found")
+        return [False for _ in compilers]
+    for compiler in compilers:
+        if output_seed != "":
+            file_result = "buffer_"+compiler.name + "_" + str(output_seed) + ".txt"
+        else:
+            file_result = "buffer_"+compiler.name + ".txt"
+        cmd_ending = [shadertrap, shadername]
+        cmd = build_env_from_compiler(compiler) + cmd_ending
+        process_return = run(cmd, capture_output=True, text=True)
+        # Detect error at compilation time
+        if 'SUCCESS!' not in process_return.stderr:
+            if verbose:
+                print("Execution error on shader " + shadername + " with " + compiler.name)
+                if process_return.stdout != "":
+                    print(process_return.stdout)
+                if process_return.stderr != "":
+                    print(process_return.stderr)
+            no_compile_errors.append(False)
+        else:
+            no_compile_errors.append(True)
+        # Concatenate files to a single output per test
+        buffer_files = find_buffer_file(os.getcwd())
+        concatenate_files(file_result, buffer_files)
+        # Move the results to the dumpbuffer
+        if move_dir != './':
+            shutil.move(file_result, move_dir)
+            buffer_files.append(file_result)
+        clean_files(os.getcwd(), buffer_files)
+    return no_compile_errors

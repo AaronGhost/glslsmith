@@ -93,23 +93,7 @@ def main():
             common.clean_files(exec_dirs.dumpbufferdir, buffers)
             # Execute program compilation on each compiler and save the results for the batch
             for i in range(ns.shadercount):
-                for compiler in compilers:
-                    cmd_ending = [exec_dirs.shadertrap,
-                                  exec_dirs.shaderoutput + "test_" + str(i) + ".shadertrap"]
-                    cmd = common.build_env_from_compiler(compiler) + cmd_ending
-                    process_return = run(cmd, capture_output=True, text=True)
-                    # Detect error at compilation time
-                    if 'SUCCESS!' not in process_return.stderr:
-                        print("Error on shader " + str(i) + " with " + compiler.name)
-                        print(process_return.stderr)
-                    # Concatenate files to a single output per test
-                    buffer_files = common.find_buffer_file(os.getcwd())
-                    file_result = "buffer_" + compiler.name + "_" + str(i) + ".txt"
-                    common.concatenate_files(file_result, buffer_files)
-                    # Move the results to the dumpbuffer
-                    shutil.move(file_result, exec_dirs.dumpbufferdir)
-                    buffer_files.append(file_result)
-                    common.clean_files(os.getcwd(), buffer_files)
+                common.execute_compilation(compilers,exec_dirs.shadertrap,exec_dirs.shaderoutput + "test_"+str(i) + ".shadertrap", str(i), exec_dirs.dumpbufferdir, True)
         # Compare outputs and save buffers
         # Check that we can compare outputs across multiple compilers
         if len(compilers) == 1:
