@@ -1,5 +1,6 @@
 import filecmp
 import shutil
+import subprocess
 from subprocess import run
 from xml.dom import minidom
 import os
@@ -122,7 +123,7 @@ def comparison_helper(files):
     return comparison_values
 
 
-def execute_compilation(compilers, shadertrap, shadername, output_seed = "", move_dir = "./", verbose = False):
+def execute_compilation(compilers, shadertrap, shadername, output_seed = "", move_dir = "./", verbose = False, timeout=30):
     no_compile_errors = []
     if not os.path.isfile(shadername):
         print(shadername + " not found")
@@ -134,7 +135,14 @@ def execute_compilation(compilers, shadertrap, shadername, output_seed = "", mov
             file_result = "buffer_"+compiler.name + ".txt"
         cmd_ending = [shadertrap, shadername]
         cmd = build_env_from_compiler(compiler) + cmd_ending
-        process_return = run(cmd, capture_output=True, text=True)
+        try:
+            process_return = run(cmd, capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            print("Timeout reached on shader "+ shadername + " with " + compiler.name)
+            no_compile_errors.append((False))
+            file = open(file_result,'w')
+            file.write("timeout")
+            continue
         # Detect error at compilation time
         if 'SUCCESS!' not in process_return.stderr:
             if verbose:
