@@ -1,3 +1,17 @@
+# Copyright 2021 The glslsmith Project Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import filecmp
 import shutil
 import subprocess
@@ -133,7 +147,7 @@ def execute_compilation(compilers, shadertrap, shadername, output_seed = "", mov
             file_result = "buffer_"+compiler.name + "_" + str(output_seed) + ".txt"
         else:
             file_result = "buffer_"+compiler.name + ".txt"
-        cmd_ending = [shadertrap, shadername]
+        cmd_ending = [shadertrap,"--require-vendor-renderer-substring",compiler.renderer, shadername]
         cmd = build_env_from_compiler(compiler) + cmd_ending
         try:
             process_return = run(cmd, capture_output=True, text=True, timeout=timeout)
@@ -142,6 +156,9 @@ def execute_compilation(compilers, shadertrap, shadername, output_seed = "", mov
             no_compile_errors.append((False))
             file = open(file_result,'w')
             file.write("timeout")
+            if move_dir != './':
+                shutil.move(file_result, move_dir)
+                clean_files(os.getcwd(),file_result)
             continue
         # Detect error at compilation time
         if 'SUCCESS!' not in process_return.stderr:

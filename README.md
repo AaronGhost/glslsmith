@@ -5,6 +5,11 @@ The generator code can be found as part of the Graphicsfuzz repository. This rep
 
 ## Installation
 
+The graphicsfuzz component of the project requires maven to run. For Debian-based distribution run:
+```
+apt install maven
+```
+
 Clone the repository and run the install command with python3 for an easy installation.
 ```
 python3 install.py
