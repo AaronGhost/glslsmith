@@ -57,7 +57,7 @@ def main():
     seeds = []
     for file in file_list:
         if compilers[0].name in file:
-            seeds.append(file.split("_")[1].split(".")[0])
+            seeds.append(file.split("_")[-1].split(".")[0])
 
     print(str(len(seeds)) + " different seeds")
     for seed in seeds:
@@ -76,7 +76,8 @@ def main():
                 if compiler_name in ns.compilers:
                     print(compiler_name + ", lines: " + report_line_nb(seed,
                                                                        exec_dirs.keptshaderdir) + ", seed: " + seed)
-            compiler_differences[compiler_name] += 1
+                compiler_differences[compiler_name] += 1
+                continue
             # Try if we are in the angle case
             if (all(compilers_dict[get_compiler_name_from_buffer(buffer_name)].type == "angle"
                     for buffer_name in results[0])
@@ -89,24 +90,25 @@ def main():
                 if "angle" in ns.compilers:
                     print("angle" + ", lines: " + report_line_nb(seed, exec_dirs.keptshaderdir) + ", seed: " + seed)
                 compiler_differences["angle"] += 1
-        else:
-            # Everything else
-            compiler_differences["more_than_two"] += 1
-            if "more_than_two" in ns.compilers:
-                print("More than two different values, lines: " + report_line_nb(seed, exec_dirs.keptshaderdir)
-                      + ", seed: " + seed)
-            if ns.verbose:
-                if len(results) == len(compilers):
-                    print("all compilers disagree\n")
-                else:
-                    compilers_text = ""
-                    for agreeing_compilers in results:
-                        for buffer_name in agreeing_compilers:
-                            compilers_text += get_compiler_name_from_buffer(buffer_name) + ", "
-                        compilers_text = compilers_text[:-2]
-                        compilers_text += " compilers agree, "
+                continue
+
+        # Everything else where a cause is difficult to identify
+        compiler_differences["more_than_two"] += 1
+        if "more_than_two" in ns.compilers:
+            print("More than two different values, lines: " + report_line_nb(seed, exec_dirs.keptshaderdir)
+                  + ", seed: " + seed)
+        if ns.verbose:
+            if len(results) == len(compilers):
+                print("all compilers disagree\n")
+            else:
+                compilers_text = ""
+                for agreeing_compilers in results:
+                    for buffer_name in agreeing_compilers:
+                        compilers_text += get_compiler_name_from_buffer(buffer_name) + ", "
                     compilers_text = compilers_text[:-2]
-                    print(compilers_text + "\n")
+                    compilers_text += " compilers agree, "
+                compilers_text = compilers_text[:-2]
+                print(compilers_text + "\n")
 
     for compiler_name in compilers_dict.keys():
         print(compiler_name + " different values: " + str(compiler_differences[compiler_name]))

@@ -29,14 +29,14 @@ def main():
         print('It has been sought as a way to provide system-dependent path to the execution scripts')
         print('All paths can be given as relative to this position or as absolute path')
 
-        print('\n[1/4] installing the program generator')
+        print('\n[1/5] installing the program generator')
 
         execute_with_popen(['git', 'submodule', 'init'])
         execute_with_popen(['git', 'submodule', 'update'])
         #execute_with_popen(["mvn","-Dmaven.test.skip=true","-q", "-am","-pl",":graphicsfuzz", "package"],"./graphicsfuzz")
         execute_with_popen(["mvn","-Dmaven.test.skip=true","-q", "install"],"./graphicsfuzz")
 
-    print('\n[2/4] Configuration of the generator working directories')
+    print('\n[2/5] Configuration of the generator working directories')
     print('Let any directory empty to use the default one which will be created in the project')
     mkdirs = []
     outputshaders = "./glslsmithoutput/shaders/"
@@ -74,14 +74,14 @@ def main():
             current_dir += dir + "/"
 
 
-    print("\n[3/4] Configuration of shader embedding language")
+    print("\n[3/5] Configuration of shader embedding language")
     print("At the moment, the only supported language to embed the shader is shadertrap")
     input_value = input("Please specify the path of the shadertrap executable: ")
     while input_value == "":
         input_value = input("Please specify the path of the shadertrap executable: ")
     shadertrap_dir = input_value
 
-    print("\n[4/4] Configuration of the tested compilers")
+    print("\n[4/5] Configuration of the tested compilers")
     print("Multiple compilers are necessary to test the buffer outputs associated with a specific shader")
     print("For each compiler, please specify:")
     print("- a compiler name (used to identify the buffer)")
@@ -91,6 +91,7 @@ def main():
     print("- VK_ICD_FILENAMES environment variable value")
     print("- other environment variables if necessary")
     print("\nIf an environment variable is not required, simply let the value empty")
+
 
     compiler_number = 1
     compilers = []
@@ -126,6 +127,51 @@ def main():
             break
         compiler_number += 1
 
+    print("\n[5/5] Configuration of the available reducers")
+    print("Reducers can be configured there to automate the exploitation phase of interesting tests")
+    print("For each reducer, please specify:")
+    print("- a reducer name")
+    print("- the complete reducer command")
+    print("- the name of the interesting shell script in the command above")
+    print("- the name of the input file of the reducer command")
+    print("- the name of the output file delivered at the end of reduction")
+    print("- a list of the extra files needed to execute reduction")
+
+    reducer_number = 1
+    reducers = []
+
+    glslreduce_decision = input("\n glsl-reduce is already installed as part of the graphicsfuzz project, install "
+                                "glsl-reduce as last-resort reducer: [Y/n]")
+
+    while True:
+        print("Enter the values for the reducer n°" + str(reducer_number) + ":")
+        reducer_name = input("Specify the reducer name:")
+        reducer_command = input("Specify the full reducer command:")
+        interesting_shell = input("Specify the shell script name:")
+        input_file = input("Specify the the input file name:")
+        output_file = input("Specify the output filme name:")
+        extrafiles = []
+        while True:
+            extrafiles_decision = input("Is an extra file necessary for reduction? [y/N]:")
+            if extrafiles_decision != "y":
+                break
+            otherenv = input("Specify the extra file name:")
+            extrafiles.append(otherenv)
+        extra_reducer_decision = input("\nDo you want to add another reducer? [y/N]:")
+        reducers.append([reducer_name, reducer_command, interesting_shell, input_file, output_file, extrafiles])
+        if extra_reducer_decision != "y":
+            break
+        reducer_number += 1
+
+    # Install glsl-reduce as last-resort reducer
+    if glslreduce_decision != "n" and glslreduce_decision != "N":
+        reducers.append(["glsl-reduce",
+                         "mvn -f "+ os.getcwd()+ "/graphicsfuzz/pom.xml -pl "
+                         "reducer exec:java \"-Dexec.mainClass=com.graphicsfuzz.reducer.tool.GlslReduce\" "
+                         "\"-Dexec.args="+os.getcwd()+"test.json " +
+                            os.getcwd()+"interesting.sh --output=" + os.getcwd() + "\"",
+                         "test.comp",
+                         "", ["test.json"]])
     # Build xml file
 
     config_location = "./scripts/config.xml"
@@ -135,8 +181,11 @@ def main():
     # Dir settings
     dirsettings = config_document.createElement("dirsettings")
     graphicsfuzz = config_document.createElement("graphicsfuzz")
-    graphicsfuzz.appendChild(config_document.createTextNode('./graphicsfuzz/'))
+    graphicsfuzz.appendChild(config_document.createTextNode(os.getcwd()+'/graphicsfuzz/'))
     dirsettings.appendChild(graphicsfuzz)
+    execdir = config_document.createElement("execdir")
+    execdir.appendChild(config_document.createTextNode(os.getcwd()))
+    dirsettings.appendChild(execdir)
     shadertrap = config_document.createElement("shadertrap")
     shadertrap.appendChild(config_document.createTextNode(shadertrap_dir))
     dirsettings.appendChild(shadertrap)
@@ -188,9 +237,41 @@ def main():
         compiler_xml.appendChild(otherenvs)
         compilers_xml.appendChild(compiler_xml)
 
-    # Dump xml file
+    # Reducers settings
+    reducers_xml = config_document.createElement("reducers")
+    for reducer in reducers:
+        reducer_xml = config_document.createElement("reducer")
+        name = config_document.createElement("name")
+        name.appendChild(config_document.createTextNode(reducer[0]))
+        command = config_document.createElement("command")
+        command.appendChild(config_document.createTextNode(reducer[1]))
+        interesting = config_document.createElement("interesting")
+        interesting.appendChild(config_document.createTextNode(reducer[2]))
+        input_file = config_document.createElement("input_file")
+        input_file.appendChild(config_document.createTextNode(reducers[3]))
+        output_file = config_document.createElement("output_file")
+        output_file.appendChild(config_document.createTextNode(reducers[4]))
+        extrafiles = config_document.createElement("extra_files")
+        if reducer[5]:
+            length = config_document.createElement("length")
+            length.appendChild(config_document.createTextNode(len(reducer[5])))
+            otherenvs.appendChild(length)
+            i = 0
+            for extra_file in reducer[5]:
+                extra_file_xml = config_document.createElement("file_" + str(i))
+                extra_file_xml.appendChild(config_document.createTextNode(extra_file))
+                otherenvs.appendChild(extra_file_xml)
+                i += 1
+        else:
+            otherenvs.appendChild(config_document.createTextNode(" "))
+        reducer_xml.appendChild(otherenvs)
+        reducers_xml.appendChild(reducer_xml)
+
     config_document.documentElement.appendChild(dirsettings)
     config_document.documentElement.appendChild(compilers_xml)
+    config_document.documentElement.appendChild(reducers_xml)
+
+    # Dump xml file
     config_file = open(config_location, "w")
     config_file.write(config_document.toprettyxml())
 

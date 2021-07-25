@@ -18,6 +18,7 @@ import os
 import shutil
 import argparse
 import common
+import automate_reducer
 
 
 def main():
@@ -32,18 +33,20 @@ def main():
     parser.add_argument('--no-compiler-validation', dest='validatecompilers', action='store_false')
     parser.add_argument('--continuous', dest='continuous', action='store_true')
     parser.add_argument('--config-file', dest='config', default="config.xml")
+    parser.add_argument('--reduce', dest="reduce", action="store_true")
     ns = parser.parse_args(sys.argv[1:])
     # temp value for compiler validation (not revalidating on loops)
     validate_compilers = ns.validatecompilers
     # Get the config files (execution directories and tested compilers)
     exec_dirs = common.load_dir_settings(ns.config)
     compilers = common.load_compilers_settings(ns.config)
+    reducers = common.load_reducers_settings(ns.config)
     batch_nb = 1
     # go to generation location
     seed = 0
     if ns.seed != -1:
         seed = ns.seed
-    os.chdir("../")
+    os.chdir(exec_dirs.execdir)
     while batch_nb == 1 or ns.continuous:
         if not ns.diffonly:
             if not ns.nogeneration:
@@ -74,12 +77,10 @@ def main():
             if ns.syntaxonly:
                 # Execute the program with the default implementation
                 for i in range(ns.shadercount):
-                    cmd = [exec_dirs.shadertrap,
-                           exec_dirs.shaderoutput + "test_" + str(i) + ".shadertrap"]
-                    process_return = run(cmd, capture_output=True, text=True)
-                    if "SUCCESS!" not in process_return.stderr:
+                    result = common.execute_compilation([compilers[0]], exec_dirs.graphicsfuzz, exec_dirs.shadertrap,
+                                               exec_dirs.shaderoutput + "test_" + str(i) + ".shadertrap", verbose=True)
+                    if result[0] != "no_crash":
                         print("Error on shader " + str(i))
-                        print(process_return.stderr)
                     else:
                         print("Shader " + str(i) + " validated")
                 # Clean the directory after usage and exit
@@ -97,7 +98,7 @@ def main():
                     buffers = common.find_buffer_file(os.getcwd())
                     common.clean_files(os.getcwd(), buffers)
                     if compiler.renderer not in process_return.stdout:
-                        print("compiler not found or not working: " + compiler)
+                        print("compiler not found or not working: " + compiler.name)
                         print(process_return.stdout)
                         print(process_return.stderr)
                         return
@@ -107,12 +108,13 @@ def main():
             common.clean_files(exec_dirs.dumpbufferdir, buffers)
             # Execute program compilation on each compiler and save the results for the batch
             for i in range(ns.shadercount):
-                common.execute_compilation(compilers,exec_dirs.shadertrap,exec_dirs.shaderoutput + "test_"+str(i) + ".shadertrap", str(i), exec_dirs.dumpbufferdir, True)
+                common.execute_compilation(compilers,exec_dirs.graphicsfuzz, exec_dirs.shadertrap,exec_dirs.shaderoutput + "test_"+str(i) + ".shadertrap", str(i), exec_dirs.dumpbufferdir, True)
         # Compare outputs and save buffers
         # Check that we can compare outputs across multiple compilers
         if len(compilers) == 1:
             print("Impossible to compare outputs for only one compiler")
             return
+        identified_shaders = []
         for i in range(ns.shadercount):
             # Reference buffers for a given shader instance
             buffers_files = []
@@ -123,12 +125,18 @@ def main():
             if len(values) != 1:
                 print("Different results across implementations for shader " + str(seed + i))
                 # Move shader
+                identified_shaders.append(str(seed + i)+".shadertrap")
                 shutil.move(exec_dirs.shaderoutput + "test_" + str(i) + ".shadertrap",
                             exec_dirs.keptshaderdir + str(seed + i) + ".shadertrap")
                 # Move buffers
                 for compiler in compilers:
                     shutil.move(exec_dirs.dumpbufferdir + "buffer_" + compiler.name + "_" + str(i) + ".txt",
                                 exec_dirs.keptbufferdir + compiler.name + "_" + str(seed + i) + ".txt")
+
+                # reduce with the default reducer if specified
+                if ns.reduce:
+                    # Copy back file to execution directory
+                    automate_reducer.batch_reduction(reducers[0], compilers, exec_dirs, identified_shaders, False)
         # Set flag for while loop and print the number of batch
         print("Batch " + str(batch_nb) + " processed")
         batch_nb += 1

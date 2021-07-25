@@ -21,8 +21,9 @@ import os
 
 
 class DirSettings:
-    def __init__(self, graphcisfuzz, shadertrap, shaderoutput, dumpbufferdir, keptbufferdir, keptshaderdir):
+    def __init__(self, graphcisfuzz, execdir, shadertrap, shaderoutput, dumpbufferdir, keptbufferdir, keptshaderdir):
         self.graphicsfuzz = graphcisfuzz
+        self.execdir = execdir
         self.shadertrap = shadertrap
         self.shaderoutput = shaderoutput
         self.dumpbufferdir = dumpbufferdir
@@ -33,14 +34,17 @@ def load_dir_settings(filename):
     xmldoc = minidom.parse(filename)
     dirs = xmldoc.getElementsByTagName("dirsettings")[0]
     graphicsfuzz = dirs.getElementsByTagName("graphicsfuzz")[0].childNodes[0].data
+    execdir = dirs.getElementsByTagName("execdir")[0].childNodes[0].data
     shadertrap = dirs.getElementsByTagName("shadertrap")[0].childNodes[0].data
     shaderoutput = dirs.getElementsByTagName("shaderoutput")[0].childNodes[0].data
     dumpbufferdir = dirs.getElementsByTagName("dumpbufferdir")[0].childNodes[0].data
     keptbufferdir = dirs.getElementsByTagName("keptbufferdir")[0].childNodes[0].data
     keptshaderdir = dirs.getElementsByTagName("keptshaderdir")[0].childNodes[0].data
-    return DirSettings(graphicsfuzz,shadertrap, shaderoutput, dumpbufferdir, keptbufferdir, keptshaderdir)
+    return DirSettings(graphicsfuzz,execdir, shadertrap, shaderoutput, dumpbufferdir, keptbufferdir, keptshaderdir)
 
 class Compiler:
+    available_syscode = 1
+
     def __init__(self,name, renderer, type, ldpath, vkfilename, othervens):
         self.name = name
         self.renderer = renderer
@@ -48,6 +52,8 @@ class Compiler:
         self.ldpath = ldpath
         self.vkfilename = vkfilename
         self.otherenvs = othervens
+        self.compilercode = Compiler.available_syscode
+        Compiler.available_syscode += 1
 
     def __str__(self):
         return self.name
@@ -71,6 +77,35 @@ def load_compilers_settings(filename):
                 otherenvs.append(otherenvsxml.getElementByTagName("env_"+str(i))[0].childNodes[0].data)
         compilers.append(Compiler(name, renderer, type, ldpath, vkfilename, otherenvs))
     return compilers
+
+class Reducer:
+    def __init__(self, reducer_name, reducer_command, interesting_test, reducer_input_name, reducer_output_name, extra_files):
+        self.name = reducer_name
+        self.command = reducer_command
+        self.interesting_test = interesting_test
+        self.input_file = reducer_input_name
+        self.output_files = reducer_output_name
+        self.extra_files_to_build = extra_files
+
+def load_reducers_settings(filename):
+    xmldoc = minidom.parse(filename)
+    reducers = []
+    reducerxml = xmldoc.getElementsByTagName("reducer")
+    for reducer in reducerxml:
+        name = reducer.getElementsByTagName("name")[0].childNodes[0].data
+        reducer_command = reducer.getElementsByTagName("command")[0].childNodes[0].data
+        interesting_test = reducer.getElementsByTagName("interesting")[0].childNodes[0].data
+        input_name = reducer.getElementsByTagName("input_file")[0].childNodes[0].data
+        output_name = reducer.getElementsByTagName("output_file")[0].childNodes[0].data
+        extra_files = []
+        extra_file_xml = reducer.getElementsByTagName("extra_files")
+        if extra_file_xml.length != 1:
+            nb_files = int(extra_file_xml.getElementByTagName("length")[0].childNodes[0].data)
+            for i in range(nb_files):
+                extra_files.append(extra_file_xml.getElementByTagName("file_"+str(i)[0]).childNodes[0].data)
+        reducers.append(Reducer(name, reducer_command, interesting_test, input_name, output_name, extra_files))
+    return reducers
+
 
 
 def concatenate_files(outputname, files):
@@ -107,17 +142,22 @@ def build_env_from_compiler(compiler):
     return cmd_env
 
 
-def find_buffer_file(dir):
+def find_file(dir, prefix):
     file_list = os.listdir(dir)
     buffer_files = []
     if dir[-1] != "/":
         dir += "/"
     for file in file_list:
-        if os.path.isfile(dir+file):
-            if "buffer_" in file:
+        if os.path.isfile(dir + file):
+            if prefix in file:
                 buffer_files.append(file)
     return buffer_files
 
+def find_buffer_file(dir):
+    return find_file(dir, "buffer_")
+
+def find_test_file(dir):
+    return find_file(dir, "test")
 
 def comparison_helper(files):
     comparison_values = []
@@ -137,25 +177,48 @@ def comparison_helper(files):
     return comparison_values
 
 
-def execute_compilation(compilers, shadertrap, shadername, output_seed = "", move_dir = "./", verbose = False, timeout=30):
+def execute_compilation(compilers, graphicsfuzz, shadertrap, shadername, output_seed = "", move_dir = "./", verbose = False, timeout=30, postprocessing=True):
     no_compile_errors = []
+    # Verify that the file exists
     if not os.path.isfile(shadername):
         print(shadername + " not found")
         return [False for _ in compilers]
+    resulting_buffers = []
+    # Call postprocessing using java
+    shader_to_compile = shadername
+    if postprocessing:
+        cmd = ["mvn", "-f", graphicsfuzz+"pom.xml","-pl","glslsmith", "-q","-e", "exec:java","-Dexec.mainClass=com.graphicsfuzz.postprocessing.PostProcessingHandler" ]
+        args = r'-Dexec.args=--src '+ str(shadername) + r' --dest tmp.shadertrap'
+        cmd += [args]
+        process_return = run(cmd, capture_output=True, text=True)
+        if "SUCCESS!" not in process_return.stdout:
+            print(process_return.stderr)
+            print(process_return.stdout)
+            print(shadername + " cannot be parsed for post-processing")
+            return [False for _ in compilers]
+        shader_to_compile = "tmp.shadertrap"
+    # Call the compilation for each available compiler
     for compiler in compilers:
+        # Specify the buffers output name (if a seed is given it is added in the name)
         if output_seed != "":
             file_result = "buffer_"+compiler.name + "_" + str(output_seed) + ".txt"
         else:
             file_result = "buffer_"+compiler.name + ".txt"
-        cmd_ending = [shadertrap,"--require-vendor-renderer-substring",compiler.renderer, shadername]
+        # Register the resulting buffer as a result instead of a temporary buffer (ie: buffer_1 etc...)
+        resulting_buffers.append(file_result)
+        # Execute the correct cmd command
+        cmd_ending = [shadertrap,"--require-vendor-renderer-substring",compiler.renderer, shader_to_compile]
         cmd = build_env_from_compiler(compiler) + cmd_ending
         try:
             process_return = run(cmd, capture_output=True, text=True, timeout=timeout)
+        # Catch timeouts (post-processed shaders should not contain any)
         except subprocess.TimeoutExpired:
             print("Timeout reached on shader "+ shadername + " with " + compiler.name)
-            no_compile_errors.append((False))
+            no_compile_errors.append(("timeout"))
+            # Write timeout as buffer value to permit direct buffer comparison in reduction for example etc...
             file = open(file_result,'w')
             file.write("timeout")
+            # Perform the copy of the file if the final buffer is saved somewhere else
             if move_dir != './':
                 shutil.move(file_result, move_dir)
                 clean_files(os.getcwd(),file_result)
@@ -164,15 +227,21 @@ def execute_compilation(compilers, shadertrap, shadername, output_seed = "", mov
         if 'SUCCESS!' not in process_return.stderr:
             if verbose:
                 print("Execution error on shader " + shadername + " with " + compiler.name)
-                if process_return.stdout != "":
-                    print(process_return.stdout)
-                if process_return.stderr != "":
-                    print(process_return.stderr)
-            no_compile_errors.append(False)
+            message = ""
+            # Output compilation error messages
+            if process_return.stdout != "":
+                print(process_return.stdout)
+                message += process_return.stdout
+            if process_return.stderr != "":
+                print(process_return.stderr)
+                message += process_return.stderr
+            no_compile_errors.append(message)
         else:
-            no_compile_errors.append(True)
+            no_compile_errors.append("no_crash")
         # Concatenate files to a single output per test
         buffer_files = find_buffer_file(os.getcwd())
+        # Exclude combined files from concatenation and removal
+        buffer_files = [file for file in buffer_files if file not in resulting_buffers]
         concatenate_files(file_result, buffer_files)
         # Move the results to the dumpbuffer
         if move_dir != './':
