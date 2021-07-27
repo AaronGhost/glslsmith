@@ -187,7 +187,7 @@ def execute_compilation(compilers, graphicsfuzz, shadertrap, shadername, output_
     # Call postprocessing using java
     shader_to_compile = shadername
     if postprocessing:
-        cmd = ["mvn", "-f", graphicsfuzz+"pom.xml","-pl","glslsmith", "-q","-e", "exec:java","-Dexec.mainClass=com.graphicsfuzz.postprocessing.PostProcessingHandler" ]
+        cmd = ["mvn", "-f", graphicsfuzz+"pom.xml","-pl","glslsmith", "-q","-e", "exec:java","-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler" ]
         args = r'-Dexec.args=--src '+ str(shadername) + r' --dest tmp.shadertrap'
         cmd += [args]
         process_return = run(cmd, capture_output=True, text=True)
