@@ -53,11 +53,13 @@ def main():
     compiler_differences["more_than_two"] = 0
     # Get a list of the files in the directory
     file_list = os.listdir(exec_dirs.keptbufferdir)
-
+    print(str(len(file_list)))
     seeds = []
     for file in file_list:
-        if compilers[0].name in file:
-            seeds.append(file.split("_")[-1].split(".")[0])
+        termination = file.split("_")[-1]
+        compiler_radix = file.replace("_"+termination,"")
+        if compilers[0].name == compiler_radix:
+            seeds.append(termination.split(".")[0])
 
     print(str(len(seeds)) + " different seeds")
     for seed in seeds:

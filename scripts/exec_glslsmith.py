@@ -40,6 +40,9 @@ def main():
     # Get the config files (execution directories and tested compilers)
     exec_dirs = common.load_dir_settings(ns.config)
     compilers = common.load_compilers_settings(ns.config)
+    compilers_dict = {}
+    for compiler in compilers:
+        compilers_dict[compiler.name] = compiler
     reducers = common.load_reducers_settings(ns.config)
     batch_nb = 1
     # go to generation location
@@ -136,7 +139,7 @@ def main():
                 # reduce with the default reducer if specified
                 if ns.reduce:
                     # Copy back file to execution directory
-                    automate_reducer.batch_reduction(reducers[0], compilers, exec_dirs, identified_shaders, False)
+                    automate_reducer.batch_reduction(reducers[0], compilers_dict, exec_dirs, identified_shaders, -1)
         # Set flag for while loop and print the number of batch
         print("Batch " + str(batch_nb) + " processed")
         batch_nb += 1
