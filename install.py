@@ -248,9 +248,9 @@ def main():
         interesting = config_document.createElement("interesting")
         interesting.appendChild(config_document.createTextNode(reducer[2]))
         input_file = config_document.createElement("input_file")
-        input_file.appendChild(config_document.createTextNode(reducers[3]))
+        input_file.appendChild(config_document.createTextNode(reducer[3]))
         output_file = config_document.createElement("output_file")
-        output_file.appendChild(config_document.createTextNode(reducers[4]))
+        output_file.appendChild(config_document.createTextNode(reducer[4]))
         extrafiles = config_document.createElement("extra_files")
         if reducer[5]:
             length = config_document.createElement("length")

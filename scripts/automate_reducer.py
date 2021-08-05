@@ -11,7 +11,7 @@ import splitter_merger
 
 def main():
     parser = argparse.ArgumentParser(description="Automates the reduction of a shadertrap file")
-    parser.add_argument("--override-reducer", dest="reducer", default="")
+    #parser.add_argument("--override-reducer", dest="reducer", default="")
     parser.add_argument('--config-file', dest='config', default="config.xml")
     parser.add_argument("--test-file-name", dest="test_file", default="test_original.shadertrap")
     parser.add_argument("--reducer", dest="reducer",default="perses")
@@ -41,10 +41,11 @@ def main():
     if ns.batch:
         files_to_reduce = os.listdir(exec_dirs.keptshaderdir)
         # Exclude files that have been already reduced
-        for file in files_to_reduce:
+        for file in list(files_to_reduce):
             if os.path.isfile(exec_dirs.keptshaderdir+file) and len(file.split("_")) > 1:
                 files_to_reduce.remove(file)
-                files_to_reduce.remove(file.split("_")[0]+".shadetrap")
+                if os.path.isfile(exec_dirs.keptshaderdir+file.split("_")[0]+".shadertrap"):
+                    files_to_reduce.remove(file.split("_")[0]+".shadertrap")
 
         batch_reduction(reducer, compilers_dict, exec_dirs, files_to_reduce, ns.ref)
     else:
@@ -56,11 +57,12 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, ref, overrid
     for file in files_to_reduce:
         # copy file to exec_dir
         file_radix = file.split(".")[0]
+        print("Reduction of " + exec_dirs.keptshaderdir+file)
         shutil.copy(exec_dirs.keptshaderdir+file, "original_test.shadertrap")
         # run reduction
         run_reduction(reducer, compilers, exec_dirs, "original_test.shadertrap", "test_reduced.shadertrap", ref)
         # copy back
-        shutil.copy("test_reduced.shadertrap", file_radix+override_prefix+".shadertrap")
+        shutil.copy("test_reduced.shadertrap", exec_dirs.keptshaderdir + file_radix+override_prefix+".shadertrap")
         # clean exec_dir
         common.clean_files(os.getcwd(),["test_reduced.shadertrap"])
 

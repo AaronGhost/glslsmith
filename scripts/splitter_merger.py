@@ -46,6 +46,7 @@ def merge(harness_file, shader_file):
     for line in lines:
         if "END\n" in line:
             keeping_flag = True
+            shadertrap_code += "\n"
         if keeping_flag:
             shadertrap_code += line
         if "DECLARE_SHADER shader KIND COMPUTE" in line:

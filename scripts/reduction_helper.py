@@ -76,7 +76,7 @@ def execute_reduction(compilers_dict,exec_dirs,shader_name, ref, clean_dir, post
     comparison_result = common.comparison_helper(buffers)
 
     if len(comparison_result) == 2:
-        if len(comparison_result[0]) == 1 or len(results[1]) == 1:
+        if len(comparison_result[0]) == 1 or len(comparison_result[1]) == 1:
             if len(comparison_result[0]) == 1:
                 compiler_name = comparison_result[0][0].split("_")[1].split(".")[0]
             else:

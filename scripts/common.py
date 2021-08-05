@@ -177,7 +177,7 @@ def comparison_helper(files):
     return comparison_values
 
 
-def execute_compilation(compilers, graphicsfuzz, shadertrap, shadername, output_seed = "", move_dir = "./", verbose = False, timeout=30, postprocessing=True):
+def execute_compilation(compilers, graphicsfuzz, shadertrap, shadername, output_seed = "", move_dir = "./", verbose = False, timeout=10, postprocessing=True):
     no_compile_errors = []
     # Verify that the file exists
     if not os.path.isfile(shadername):
@@ -197,6 +197,7 @@ def execute_compilation(compilers, graphicsfuzz, shadertrap, shadername, output_
             print(shadername + " cannot be parsed for post-processing")
             return [False for _ in compilers]
         shader_to_compile = "tmp.shadertrap"
+
     # Call the compilation for each available compiler
     for compiler in compilers:
         # Specify the buffers output name (if a seed is given it is added in the name)
