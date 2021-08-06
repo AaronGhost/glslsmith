@@ -75,9 +75,10 @@ def build_shell_test(compilers_dict, exec_dirs, harness_name, shader_name, ref, 
         shell.write("echo $ERROR_CODE_IN_FILE\n")
         shell.write("if [ \"$ERROR_CODE_IN_FILE\" == \"$ERROR_CODE\" ]\nthen\n    exit 0\nelse\n    exit 1\nfi\n")
         shell.close()
+        return str(error_code)
     else:
         print("Execution seems to conform on all tested compilers")
-        sys.exit(1)
+        return "0000"
 
 
 if __name__ == '__main__':

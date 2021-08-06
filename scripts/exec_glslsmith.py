@@ -34,6 +34,7 @@ def main():
     parser.add_argument('--continuous', dest='continuous', action='store_true')
     parser.add_argument('--config-file', dest='config', default="config.xml")
     parser.add_argument('--reduce', dest="reduce", action="store_true")
+    parser.add_argument('--reduce-timeout', dest="timeout", action="store_true")
     ns = parser.parse_args(sys.argv[1:])
     # temp value for compiler validation (not revalidating on loops)
     validate_compilers = ns.validatecompilers
@@ -138,8 +139,8 @@ def main():
 
                 # reduce with the default reducer if specified
                 if ns.reduce:
-                    # Copy back file to execution directory
-                    automate_reducer.batch_reduction(reducers[0], compilers_dict, exec_dirs, identified_shaders, -1)
+                    automate_reducer.batch_reduction(reducers[0], compilers_dict, exec_dirs, identified_shaders, -1,
+                                                     ns.timeout)
         # Set flag for while loop and print the number of batch
         print("Batch " + str(batch_nb) + " processed")
         batch_nb += 1

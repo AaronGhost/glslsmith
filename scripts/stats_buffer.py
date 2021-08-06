@@ -32,9 +32,12 @@ def get_compiler_name_from_buffer(buffer_name):
 
 def main():
     parser = argparse.ArgumentParser(description="Print stats and info about difference showing buffers")
-    parser.add_argument('--report-seed', dest='compilers', default=[], nargs="+")
-    parser.add_argument('--verbose', dest="verbose", action="store_true")
-    parser.add_argument('--config-file', dest='config', default="config.xml")
+    parser.add_argument('--report-seed', dest='compilers', default=[], nargs="+",
+                        help="Provide the compilers for which the seed number and the shader length will be reported, "
+                             "pass all to get the values for all compilers")
+    parser.add_argument('--verbose', dest="verbose", action="store_true", help="Gives the detail of agreeing compiler "
+                                                                               "for non-trivial case")
+    parser.add_argument('--config-file', dest='config', default="config.xml", help="Provides a different config file ")
     ns = parser.parse_args(sys.argv[1:])
     # Parse directory config
     exec_dirs = common.load_dir_settings(ns.config)
@@ -74,7 +77,7 @@ def main():
                     compiler_name = get_compiler_name_from_buffer(results[0][0])
                 else:
                     compiler_name = get_compiler_name_from_buffer(results[1][0])
-                if compiler_name in ns.compilers:
+                if compiler_name in ns.compilers or "all" in ns.compilers:
                     print(compiler_name + ", lines: " + report_line_nb(seed,
                                                                        exec_dirs.keptshaderdir) + ", seed: " + seed)
                 compiler_differences[compiler_name] += 1
@@ -88,14 +91,14 @@ def main():
                             for buffer_name in results[1])
                         and all(compilers_dict[get_compiler_name_from_buffer(buffer_name)].type == "independent"
                                 for buffer_name in results[0])):
-                if "angle" in ns.compilers:
+                if "angle" in ns.compilers or "all" in ns.compilers:
                     print("angle" + ", lines: " + report_line_nb(seed, exec_dirs.keptshaderdir) + ", seed: " + seed)
                 compiler_differences["angle"] += 1
                 continue
 
         # Everything else where a cause is difficult to identify
         compiler_differences["more_than_two"] += 1
-        if "more_than_two" in ns.compilers:
+        if "more_than_two" in ns.compilers or "all" in ns.compilers:
             print("More than two different values, lines: " + report_line_nb(seed, exec_dirs.keptshaderdir)
                   + ", seed: " + seed)
         if ns.verbose:
