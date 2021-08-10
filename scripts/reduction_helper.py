@@ -95,7 +95,7 @@ def execute_reduction(compilers_dict,exec_dirs,shader_name, ref, clean_dir, post
                             for buffer_name in comparison_result[0])):
             if clean_dir:
                 common.clean_files(os.getcwd(),common.find_buffer_file(os.getcwd()))
-            sys.exit(3099)
+            sys.exit(str(3099))
         else:
             if clean_dir:
                 common.clean_files(os.getcwd(),common.find_buffer_file(os.getcwd()))

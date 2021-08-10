@@ -88,9 +88,13 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, r
         print("Setup finished, beginning reduction")
         cmd = shlex.split(reducer.command)
         process = subprocess.run(cmd, stdout=sys.stdout, stderr=sys.stdout, universal_newlines=True, cwd=exec_dirs.execdir)
-        print("reduction finished")
+        #print("reduction finished")
         # after execution concatenate back the result
-        splitter_merger.merge(test_output, reducer.output_files)
+        if os.path.isfile(reducer.output_files):
+            splitter_merger.merge(test_output, reducer.output_files)
+            print("Reduction finished")
+        else:
+            print("Reduction failed for shader")
     elif error_code >= 2000:
         print("Skipping test-case reduction for timeout shader")
     else:
