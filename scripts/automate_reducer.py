@@ -61,10 +61,12 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, ref, reduce_
         # run reduction
         run_reduction(reducer, compilers, exec_dirs, "original_test.shadertrap", "test_reduced.shadertrap", ref,
                       reduce_timeout)
+
         # copy back
-        shutil.copy("test_reduced.shadertrap", exec_dirs.keptshaderdir + file_radix+override_prefix+".shadertrap")
-        # clean exec_dir
-        common.clean_files(os.getcwd(),["test_reduced.shadertrap"])
+        if os.path.isfile(exec_dirs.execdir+"test_reduced.shadertrap"):
+            shutil.copy("test_reduced.shadertrap", exec_dirs.keptshaderdir + file_radix+override_prefix+".shadertrap")
+            # clean exec_dir
+            common.clean_files(os.getcwd(),["test_reduced.shadertrap"])
 
 
 def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, reduce_timeout):
@@ -75,7 +77,7 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, r
     error_code_str = create_shell_test.build_shell_test(compilers, exec_dirs, "temp.shadertrap", reducer.input_file, ref,
                                                     reducer.interesting_test)
     error_code = int(error_code_str[:4])
-    common.clean_files(exec_dirs.execdir, find_buffer_file)
+    common.clean_files(exec_dirs.execdir, common.find_buffer_file(exec_dirs.execdir))
     # Copy the input file to the output (prevents to destroy the harness through execution)
     shutil.copy(test_input, test_output)
     if error_code >= 3000 or (1000 <= error_code <= 1999) or (error_code >= 2000 and reduce_timeout):
@@ -89,17 +91,20 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, r
         print("Setup finished, beginning reduction")
         cmd = shlex.split(reducer.command)
         process = subprocess.run(cmd, stdout=sys.stdout, stderr=sys.stdout, universal_newlines=True, cwd=exec_dirs.execdir)
-        #print("reduction finished")
         # after execution concatenate back the result
         if os.path.isfile(reducer.output_files):
             splitter_merger.merge(test_output, reducer.output_files)
             print("Reduction finished")
         else:
             print("Reduction failed for shader")
+            common.clean_files(os.getcwd(),["test_reduced.shadertrap"])
     elif error_code >= 2000:
         print("Skipping test-case reduction for timeout shader")
+        common.clean_files(os.getcwd(), ["test_reduced.shadertrap"])
     else:
         print("No error on the current shader")
+        common.clean_files(os.getcwd(), ["test_reduced.shadertrap"])
+
     # Cleans the current repository
     common.clean_files(os.getcwd(),["temp.shadertrap",reducer.input_file, reducer.output_files, reducer.interesting_test])
     residues = common.find_test_file(os.getcwd())
