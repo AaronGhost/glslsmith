@@ -21,9 +21,12 @@ import common
 
 
 def report_line_nb(seed, dir):
-    cmd = ["wc", "-l", dir + str(seed) + r".shadertrap"]
-    process_return = run(cmd, capture_output=True, text=True)
-    return process_return.stdout.split()[0]
+    if os.path.isfile(dir + str(seed) + ".shadertrap"):
+    	cmd = ["wc", "-l", dir + str(seed) + r".shadertrap"]
+    	process_return = run(cmd, capture_output=True, text=True)
+    	return process_return.stdout.split()[0]
+    else:
+        return "missing"
 
 
 def get_compiler_name_from_buffer(buffer_name):

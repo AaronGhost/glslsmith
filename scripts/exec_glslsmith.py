@@ -92,7 +92,7 @@ def main():
                 common.clean_files(os.getcwd(), buffers)
                 print("Compilation of all programs done")
                 return
-            # Validate compilers on the first program instance
+            # Validate compilers on an empty program instance
             if validate_compilers:
                 for compiler in compilers:
                     cmd_ending = [exec_dirs.shadertrap, "--show-gl-info", "--require-vendor-renderer-substring",

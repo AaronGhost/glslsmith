@@ -191,6 +191,8 @@ def execute_compilation(compilers, graphicsfuzz, shadertrap, shadername, output_
         args = r'-Dexec.args=--src '+ str(shadername) + r' --dest tmp.shadertrap'
         cmd += [args]
         process_return = run(cmd, capture_output=True, text=True)
+        #print(process_return.stderr)
+        #print(process_return.stdout)
         if "SUCCESS!" not in process_return.stdout:
             print(process_return.stderr)
             print(process_return.stdout)

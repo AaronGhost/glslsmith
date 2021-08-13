@@ -75,6 +75,7 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, r
     error_code_str = create_shell_test.build_shell_test(compilers, exec_dirs, "temp.shadertrap", reducer.input_file, ref,
                                                     reducer.interesting_test)
     error_code = int(error_code_str[:4])
+    common.clean_files(exec_dirs.execdir, find_buffer_file)
     # Copy the input file to the output (prevents to destroy the harness through execution)
     shutil.copy(test_input, test_output)
     if error_code >= 3000 or (1000 <= error_code <= 1999) or (error_code >= 2000 and reduce_timeout):
