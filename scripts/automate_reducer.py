@@ -13,7 +13,7 @@ def main():
     parser = argparse.ArgumentParser(description="Automates the reduction of a shadertrap file")
     parser.add_argument('--config-file', dest='config', default="config.xml")
     parser.add_argument("--test-file-name", dest="test_file", default="test_original.shadertrap")
-    parser.add_argument("--reducer", dest="reducer",default="perses")
+    parser.add_argument("--reducer", dest="reducer",default="glsl-reduce")
     parser.add_argument('--ref', type=int, dest="ref", default=-1)
     parser.add_argument("--output-file", dest="output_file", default="test_reduced.shadertrap")
     parser.add_argument("--batch-reduction", dest="batch", action="store_true")
