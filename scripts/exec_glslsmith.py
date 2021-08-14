@@ -42,6 +42,18 @@ def main():
     # Get the config files (execution directories and tested compilers)
     exec_dirs = common.load_dir_settings(ns.config)
     compilers = common.load_compilers_settings(ns.config)
+    reducers = common.load_reducers_settings(ns.config)
+    if len(reducers) == 0:
+        exit("No reducer has been declared at installation, please rerun installation or edit the configuration file")
+    reducer = reducers[0]
+    if ns.reducer != "":
+        reducer_found = False
+        for existing_reducer in reducers:
+            if existing_reducer.name == ns.reducer:
+                reducer = existing_reducer
+                reducer_found = True
+        if not reducer_found:
+            exit("No reducer named "+ str(ns.reducer) + " configured")
     compilers_dict = {}
     for compiler in compilers:
         compilers_dict[compiler.name] = compiler
@@ -140,7 +152,7 @@ def main():
 
                 # reduce with the default reducer if specified
                 if ns.reduce:
-                    automate_reducer.batch_reduction(ns.reducer, compilers_dict, exec_dirs, identified_shaders, -1,
+                    automate_reducer.batch_reduction(reducer, compilers_dict, exec_dirs, identified_shaders, -1,
                                                      ns.timeout)
         # Set flag for while loop and print the number of batch
         print("Batch " + str(batch_nb) + " processed")
