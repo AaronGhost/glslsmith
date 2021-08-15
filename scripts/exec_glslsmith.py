@@ -57,7 +57,6 @@ def main():
     compilers_dict = {}
     for compiler in compilers:
         compilers_dict[compiler.name] = compiler
-    reducers = common.load_reducers_settings(ns.config)
     batch_nb = 1
     # go to generation location
     seed = 0
