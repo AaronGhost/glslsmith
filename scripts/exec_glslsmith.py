@@ -149,10 +149,10 @@ def main():
                     shutil.move(exec_dirs.dumpbufferdir + "buffer_" + compiler.name + "_" + str(i) + ".txt",
                                 exec_dirs.keptbufferdir + compiler.name + "_" + str(seed + i) + ".txt")
 
-                # reduce with the default reducer if specified
-                if ns.reduce:
-                    automate_reducer.batch_reduction(reducer, compilers_dict, exec_dirs, identified_shaders, -1,
-                                                     ns.timeout)
+        # reduce with the default reducer if specified
+        if ns.reduce:
+            automate_reducer.batch_reduction(reducer, compilers_dict, exec_dirs, identified_shaders, -1,
+                                             ns.timeout)
         # Set flag for while loop and print the number of batch
         print("Batch " + str(batch_nb) + " processed")
         batch_nb += 1
