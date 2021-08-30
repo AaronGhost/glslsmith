@@ -4,6 +4,8 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
+from datetime import timedelta
 
 import create_shell_test
 import common
@@ -18,6 +20,7 @@ def main():
     parser.add_argument("--output-file", dest="output_file", default="test_reduced.shadertrap")
     parser.add_argument("--batch-reduction", dest="batch", action="store_true")
     parser.add_argument("--reduce-timeout", dest="timeout", action="store_true")
+    parser.add_argument("--instrumentation", dest="instru", action="store_true")
     ns = parser.parse_args(sys.argv[1:])
 
     reducers = common.load_reducers_settings(ns.config)
@@ -47,12 +50,12 @@ def main():
                 if os.path.isfile(exec_dirs.keptshaderdir+file.split("_")[0]+".shadertrap"):
                     files_to_reduce.remove(file.split("_")[0]+".shadertrap")
 
-        batch_reduction(reducer, compilers_dict, exec_dirs, files_to_reduce, ns.ref, ns.timeout)
+        batch_reduction(reducer, compilers_dict, exec_dirs, files_to_reduce, ns.ref, ns.timeout, instrumentation=ns.instru)
     else:
-        run_reduction(reducer, compilers_dict, exec_dirs, ns.test_file, ns.output_file, ns.ref, ns.timeout)
+        run_reduction(reducer, compilers_dict, exec_dirs, ns.test_file, ns.output_file, ns.ref, ns.timeout, instrumentation=ns.instru)
 
 
-def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, ref, reduce_timeout, override_prefix="_reduced"):
+def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, ref, reduce_timeout, override_prefix="_reduced", instrumentation=False):
     for file in files_to_reduce:
         # copy file to exec_dir
         file_radix = file.split(".")[0]
@@ -60,22 +63,27 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, ref, reduce_
         shutil.copy(exec_dirs.keptshaderdir+file, "original_test.shadertrap")
         # run reduction
         run_reduction(reducer, compilers, exec_dirs, "original_test.shadertrap", "test_reduced.shadertrap", ref,
-                      reduce_timeout)
+                      reduce_timeout, log_file=reducer.name + "_" + file_radix + ".log", instrumentation=instrumentation)
 
         # copy back
         if os.path.isfile(exec_dirs.execdir+"test_reduced.shadertrap"):
-            shutil.copy("test_reduced.shadertrap", exec_dirs.keptshaderdir + file_radix+override_prefix+".shadertrap")
+            shutil.copy("test_reduced.shadertrap", exec_dirs.keptshaderdir + file_radix + override_prefix+".shadertrap")
             # clean exec_dir
             common.clean_files(os.getcwd(),["test_reduced.shadertrap"])
 
 
-def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, reduce_timeout):
+def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, reduce_timeout, log_file="", instrumentation = True):
     # Builds the interestingness test
     print("Building the interesting shell script")
     # Builds a temp harness
     shutil.copy(test_input, "temp.shadertrap")
-    error_code_str = create_shell_test.build_shell_test(compilers, exec_dirs, "temp.shadertrap", reducer.input_file, ref,
-                                                    reducer.interesting_test)
+
+    # Accounts for instrumentation
+    instrumentation_filename = log_file
+    if instrumentation and instrumentation_filename == "":
+        instrumentation_filename = reducer.name + "_" + test_input + ".log"
+    error_code_str = create_shell_test.build_shell_test(compilers, exec_dirs, "temp.shadertrap", reducer.input_file, ref
+                                                        , reducer.interesting_test, instrumentation_filename)
     error_code = int(error_code_str[:4])
     common.clean_files(exec_dirs.execdir, common.find_buffer_file(exec_dirs.execdir))
     # Copy the input file to the output (prevents to destroy the harness through execution)
@@ -87,14 +95,22 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, r
             json_file.close()
         # extract the shader code using the splitter and name it as input_file
         splitter_merger.split(test_input, reducer.input_file)
+
         # perform the reduction using the reduction launch command
+        ref_timestamp = time.time()
         print("Setup finished, beginning reduction")
         cmd = shlex.split(reducer.command)
         process = subprocess.run(cmd, stdout=sys.stdout, stderr=sys.stdout, universal_newlines=True, cwd=exec_dirs.execdir)
         # after execution concatenate back the result
         if os.path.isfile(reducer.output_files):
             splitter_merger.merge(test_output, reducer.output_files)
-            print("Reduction finished")
+            end_timestamp = time.time()
+            delta = timedelta(seconds=end_timestamp-ref_timestamp)
+            print("Reduction finished in " + str(delta))
+            if instrumentation:
+                f = open(instrumentation_filename, "a")
+                f.write("\n" + str(delta))
+                f.close()
         else:
             print("Reduction failed for shader")
             common.clean_files(os.getcwd(),["test_reduced.shadertrap"])

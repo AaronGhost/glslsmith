@@ -39,7 +39,7 @@ def main():
     os.chdir(exec_dirs.execdir)
     build_shell_test(compilers_dict, exec_dirs, ns.harness, ns.shader, ns.ref, ns.shellname)
 
-def build_shell_test(compilers_dict, exec_dirs, harness_name, shader_name, ref, shell_file):
+def build_shell_test(compilers_dict, exec_dirs, harness_name, shader_name, ref, shell_file, instrumentation=""):
     # Collect error code from the reduction process
     try:
         reduction_helper.execute_reduction(compilers_dict, exec_dirs, harness_name, ref,True, True)
@@ -62,8 +62,8 @@ def build_shell_test(compilers_dict, exec_dirs, harness_name, shader_name, ref, 
         shell.write("SHADER_ROOT=(${1//./ })\n")
         shell.write("SHADER=\"${SHADER_ROOT}.comp\"\n")
         shell.write("fi\n")
-        # Call glslang and check for errors
-        #shell.write("glslangValidator \"$SHADER\"\n")
+        if instrumentation != "":
+            shell.write("python3 ${ROOT}/scripts/benchmark_helper.py --log ${ROOT}/" + instrumentation + "\n")
         # Check that main remains
         shell.write("cat \"$SHADER\" | grep \"main\"\n")
         # Call merger
