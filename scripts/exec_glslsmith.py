@@ -23,19 +23,31 @@ import automate_reducer
 
 def main():
     # Parse arguments
-    parser = argparse.ArgumentParser(description="Execute Glslsmith generator and sort results")
-    parser.add_argument('--seed', dest='seed', default=-1)
-    parser.add_argument('--shader-count', dest='shadercount', default=50, type=int)
-    parser.add_argument('--syntax-only', dest='syntaxonly', action='store_true')
-    parser.add_argument('--generate-only', dest='generateonly', action='store_true')
-    parser.add_argument('--no-generation', dest='nogeneration',action='store_true')
-    parser.add_argument('--diff-files-only', dest='diffonly', action='store_true')
-    parser.add_argument('--no-compiler-validation', dest='validatecompilers', action='store_false')
-    parser.add_argument('--continuous', dest='continuous', action='store_true')
-    parser.add_argument('--config-file', dest='config', default="config.xml")
-    parser.add_argument('--reduce', dest="reduce", action="store_true")
-    parser.add_argument("--reducer", dest="reducer",default="glsl-reduce")
-    parser.add_argument('--reduce-timeout', dest="timeout", action="store_true")
+    parser = argparse.ArgumentParser(description="Execute GLSLsmith framework and sort results")
+    parser.add_argument('--seed', dest='seed', default=-1, help="Seed the random generator of GLSLsmith")
+    parser.add_argument('--shader-count', dest='shadercount', default=50, type=int,
+                        help="Specify the number of test per batch")
+    parser.add_argument('--syntax-only', dest='syntaxonly', action='store_true',
+                        help="Compile only the first compiler of the provided list to verify the syntax through "
+                             "ShaderTrap")
+    parser.add_argument('--generate-only', dest='generateonly', action='store_true',
+                        help="Only generate shaders without doing differential testing")
+    parser.add_argument('--no-generation', dest='nogeneration', action='store_true',
+                        help="Performs execution and differential testing on already provided files")
+    parser.add_argument('--diff-files-only', dest='diffonly', action='store_true',
+                        help="Only compare already written buffer outputs")
+    parser.add_argument('--no-compiler-validation', dest='validatecompilers', action='store_false',
+                        help="Deactivate the compiler validation at beginning of the batch execution")
+    parser.add_argument('--continuous', dest='continuous', action='store_true',
+                        help="Launch the bug finding in never ending mode")
+    parser.add_argument('--config-file', dest='config', default="config.xml",
+                        help="specify a different configuration file from the default")
+    parser.add_argument('--reduce', dest="reduce", action="store_true",
+                        help="Reduce interesting shaders at the end of a batch")
+    parser.add_argument("--reducer", dest="reducer", default="glsl-reduce",
+                        help="Enforce the reducer if reduction is applied, see --reduce")
+    parser.add_argument('--reduce-timeout', dest="timeout", action="store_true",
+                        help="Force the reducer to consider reduction of shaders that time out (DISCOURAGED)")
     ns = parser.parse_args(sys.argv[1:])
     # temp value for compiler validation (not revalidating on loops)
     validate_compilers = ns.validatecompilers
@@ -53,7 +65,7 @@ def main():
                 reducer = existing_reducer
                 reducer_found = True
         if not reducer_found:
-            exit("No reducer named "+ str(ns.reducer) + " configured")
+            exit("No reducer named " + str(ns.reducer) + " configured")
     compilers_dict = {}
     for compiler in compilers:
         compilers_dict[compiler.name] = compiler
@@ -70,7 +82,8 @@ def main():
                 cmd = ["mvn", "-f", exec_dirs.graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e"
                     , "exec:java", "-Dexec.mainClass=com.graphicsfuzz.GeneratorHandler"]
 
-                args = r'-Dexec.args=--shader-count ' + str(ns.shadercount) + r' --output-directory ' + exec_dirs.shaderoutput
+                args = r'-Dexec.args=--shader-count ' + str(
+                    ns.shadercount) + r' --output-directory ' + exec_dirs.shaderoutput
                 if ns.seed != -1:
                     args += r' --seed ' + str(ns.seed)
                 cmd += [args]
@@ -94,7 +107,8 @@ def main():
                 # Execute the program with the default implementation
                 for i in range(ns.shadercount):
                     result = common.execute_compilation([compilers[0]], exec_dirs.graphicsfuzz, exec_dirs.shadertrap,
-                                               exec_dirs.shaderoutput + "test_" + str(i) + ".shadertrap", verbose=True)
+                                                        exec_dirs.shaderoutput + "test_" + str(i) + ".shadertrap",
+                                                        verbose=True)
                     if result[0] != "no_crash":
                         print("Error on shader " + str(i))
                     else:
@@ -124,7 +138,9 @@ def main():
             common.clean_files(exec_dirs.dumpbufferdir, buffers)
             # Execute program compilation on each compiler and save the results for the batch
             for i in range(ns.shadercount):
-                common.execute_compilation(compilers,exec_dirs.graphicsfuzz, exec_dirs.shadertrap,exec_dirs.shaderoutput + "test_"+str(i) + ".shadertrap", str(i), exec_dirs.dumpbufferdir, True)
+                common.execute_compilation(compilers, exec_dirs.graphicsfuzz, exec_dirs.shadertrap,
+                                           exec_dirs.shaderoutput + "test_" + str(i) + ".shadertrap", str(i),
+                                           exec_dirs.dumpbufferdir, True)
         # Compare outputs and save buffers
         # Check that we can compare outputs across multiple compilers
         if len(compilers) == 1:
@@ -141,7 +157,7 @@ def main():
             if len(values) != 1:
                 print("Different results across implementations for shader " + str(seed + i))
                 # Move shader
-                identified_shaders.append(str(seed + i)+".shadertrap")
+                identified_shaders.append(str(seed + i) + ".shadertrap")
                 shutil.move(exec_dirs.shaderoutput + "test_" + str(i) + ".shadertrap",
                             exec_dirs.keptshaderdir + str(seed + i) + ".shadertrap")
                 # Move buffers

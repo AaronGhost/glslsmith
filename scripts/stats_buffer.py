@@ -22,9 +22,9 @@ import common
 
 def report_line_nb(seed, dir):
     if os.path.isfile(dir + str(seed) + ".shadertrap"):
-    	cmd = ["wc", "-l", dir + str(seed) + r".shadertrap"]
-    	process_return = run(cmd, capture_output=True, text=True)
-    	return process_return.stdout.split()[0]
+        cmd = ["wc", "-l", dir + str(seed) + r".shadertrap"]
+        process_return = run(cmd, capture_output=True, text=True)
+        return process_return.stdout.split()[0]
     else:
         return "missing"
 
@@ -37,7 +37,7 @@ def main():
     parser = argparse.ArgumentParser(description="Print stats and info about difference showing buffers")
     parser.add_argument('--report-seed', dest='compilers', default=[], nargs="+",
                         help="Provide the compilers for which the seed number and the shader length will be reported, "
-                             "pass all to get the values for all compilers")
+                             "pass all to get the values for all compilers, and more_than_two for non-trivial case")
     parser.add_argument('--verbose', dest="verbose", action="store_true", help="Gives the detail of agreeing compiler "
                                                                                "for non-trivial case")
     parser.add_argument('--config-file', dest='config', default="config.xml", help="Provides a different config file ")
@@ -62,7 +62,7 @@ def main():
     seeds = []
     for file in file_list:
         termination = file.split("_")[-1]
-        compiler_radix = file.replace("_"+termination,"")
+        compiler_radix = file.replace("_" + termination, "")
         if compilers[0].name == compiler_radix:
             seeds.append(termination.split(".")[0])
 
@@ -70,7 +70,7 @@ def main():
     for seed in seeds:
         correct_seed_buffers = []
         for compiler in compilers:
-            correct_seed_buffers.append(exec_dirs.keptbufferdir+compiler.name + "_" + seed + ".txt")
+            correct_seed_buffers.append(exec_dirs.keptbufferdir + compiler.name + "_" + seed + ".txt")
         results = common.comparison_helper(correct_seed_buffers)
         # Read back results from the comparison
         if len(results) == 2:
@@ -120,7 +120,8 @@ def main():
     for compiler_name in compilers_dict.keys():
         print(compiler_name + " different values: " + str(compiler_differences[compiler_name]))
     print("angle different values: " + str(compiler_differences["angle"]))
-    print("more than two groups of values: "+ str(compiler_differences["more_than_two"]))
+    print("more than two groups of values: " + str(compiler_differences["more_than_two"]))
+
 
 if __name__ == "__main__":
     main()

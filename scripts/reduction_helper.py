@@ -19,6 +19,7 @@ import sys
 
 import common
 
+
 # Internal error code on exit have been distributed as follow
 # Compiler codes are defined by the order of the compiler in the config file and only the first to fail is reported
 # All crash: 1000
@@ -31,13 +32,20 @@ import common
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Tool to compile and compare shader output in order to help shader reduction")
-    parser.add_argument("--no-postprocessing", dest="postprocessing", action="store_false")
-    parser.add_argument("--override-compilers", dest="restrict_compilers", default=[], nargs="+")
-    parser.add_argument('--shader-name', dest='shader',default='test.shadertrap')
-    parser.add_argument('--ref', type=int, dest="ref", default=-1)
-    parser.add_argument('--no-cleaning', dest='clean', action="store_false")
-    parser.add_argument('--config-file', dest='config', default="config.xml")
+    parser = argparse.ArgumentParser(
+        description="Tool to compile and compare shader output in order to help shader reduction")
+    parser.add_argument("--no-postprocessing", dest="postprocessing", action="store_false",
+                        help="Deactivate post-processing")
+    parser.add_argument("--override-compilers", dest="restrict_compilers", default=[], nargs="+",
+                        help="Override the list of compilers which will be used")
+    parser.add_argument('--shader-name', dest='shader', default='test.shadertrap',
+                        help="Specify the shader name to reduce (by default: test.shadertrap)")
+    parser.add_argument('--ref', type=int, dest="ref", default=-1,
+                        help="Compare the combined buffer outputs to a reference file")
+    parser.add_argument('--no-cleaning', dest='clean', action="store_false",
+                        help="Do not clean buffers and post-processed shaders after execution")
+    parser.add_argument('--config-file', dest='config', default="config.xml",
+                        help="specify a different configuration file from the default")
     ns = parser.parse_args(sys.argv[1:])
     # Parse directory config
     exec_dirs = common.load_dir_settings(ns.config)
@@ -50,11 +58,12 @@ def main():
     execute_reduction(compilers_dict, exec_dirs, ns.shader, ns.ref, ns.clean, ns.postprocessing)
 
 
-def execute_reduction(compilers_dict,exec_dirs,shader_name, ref, clean_dir, postprocessing):
+def execute_reduction(compilers_dict, exec_dirs, shader_name, ref, clean_dir, postprocessing):
     # Execute the shadertrap file with the different drivers
     common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))
     compilers = list(compilers_dict.values())
-    results = common.execute_compilation(compilers, exec_dirs.graphicsfuzz, exec_dirs.shadertrap, shader_name, verbose=True, postprocessing=postprocessing)
+    results = common.execute_compilation(compilers, exec_dirs.graphicsfuzz, exec_dirs.shadertrap, shader_name,
+                                         verbose=True, postprocessing=postprocessing)
     if clean_dir:
         common.clean_files(os.getcwd(), ["tmp.shadertrap"])
     crash_flag = False
@@ -76,20 +85,21 @@ def execute_reduction(compilers_dict,exec_dirs,shader_name, ref, clean_dir, post
     if all_crashed:
         sys.exit(str(1000))
     elif crash_flag:
-        sys.exit(str(1000+cp_codes_crash))
+        sys.exit(str(1000 + cp_codes_crash))
     elif timeout_flag:
-        sys.exit(str(2000+cp_codes_timeout))
+        sys.exit(str(2000 + cp_codes_timeout))
     print("No crash")
     if ref != -1:
         for compiler_name in compilers_dict.keys():
-            comparison_result = common.comparison_helper(["buffer_" + compiler_name + ".txt", exec_dirs.keptbufferdir + str(ref)+".txt"])
+            comparison_result = common.comparison_helper(
+                ["buffer_" + compiler_name + ".txt", exec_dirs.keptbufferdir + str(ref) + ".txt"])
             if len(comparison_result) == 2:
                 print("Buffer difference between test and reference result: " + compiler_name)
-                sys.exit(str(5000+compilers[compiler_name].compilercode))
+                sys.exit(str(5000 + compilers[compiler_name].compilercode))
         print("No difference between tests and references")
     buffers = []
     for compiler_name in compilers_dict.keys():
-        buffers.append("buffer_"+compiler_name + ".txt")
+        buffers.append("buffer_" + compiler_name + ".txt")
     comparison_result = common.comparison_helper(buffers)
 
     if len(comparison_result) == 2:
@@ -99,8 +109,8 @@ def execute_reduction(compilers_dict,exec_dirs,shader_name, ref, clean_dir, post
             else:
                 compiler_name = comparison_result[1][0].split("_")[1].split(".")[0]
             if clean_dir:
-                common.clean_files(os.getcwd(),common.find_buffer_file(os.getcwd()))
-            sys.exit(str(3000+1 << compilers_dict[compiler_name].compilercode))
+                common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))
+            sys.exit(str(3000 + 1 << compilers_dict[compiler_name].compilercode))
         # Try if we are in the angle case
         if (all(compilers_dict[buffer_name.split("_")[1].split(".")[0]].type == "angle"
                 for buffer_name in comparison_result[0])
@@ -111,12 +121,12 @@ def execute_reduction(compilers_dict,exec_dirs,shader_name, ref, clean_dir, post
                     and all(compilers_dict[buffer_name.split("_")[1].split(".")[0]].type == "independent"
                             for buffer_name in comparison_result[0])):
             if clean_dir:
-                common.clean_files(os.getcwd(),common.find_buffer_file(os.getcwd()))
+                common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))
             sys.exit(str(3099))
         else:
             if clean_dir:
-                common.clean_files(os.getcwd(),common.find_buffer_file(os.getcwd()))
-            sys.exit(str(4000)+" " + str(comparison_result))
+                common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))
+            sys.exit(str(4000) + " " + str(comparison_result))
     elif len(comparison_result) >= 3:
         if clean_dir:
             common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))

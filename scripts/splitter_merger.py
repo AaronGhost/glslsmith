@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
-import os
 import sys
+
 
 def split(source_file, output_file):
     f = open(source_file, "r")
@@ -31,6 +31,7 @@ def split(source_file, output_file):
     g = open(output_file, "w")
     g.write(glsl_lines)
     g.close()
+
 
 def merge(harness_file, shader_file):
     g = open(shader_file, "r")
@@ -56,12 +57,18 @@ def merge(harness_file, shader_file):
     f.write(shadertrap_code)
     f.close()
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Extracting tool to get a glsl script from shadertrap or change the inner shader of a shadertrap code")
-    parser.add_argument("--split", dest="split_file", nargs=2, help="first argument is the original shadertrap code, second is the resulting glsl code location")
-    parser.add_argument("--merge", dest="merge_files", nargs=2, help="first argument is the shadertrap code, second is the glsl code")
+    parser = argparse.ArgumentParser(
+        description="Extracting tool to get a glsl script from shadertrap or change the inner shader of a shadertrap "
+                    "code")
+    parser.add_argument("--split", dest="split_file", nargs=2,
+                        help="first argument is the original shadertrap code, second is the resulting glsl code "
+                             "location")
+    parser.add_argument("--merge", dest="merge_files", nargs=2,
+                        help="first argument is the shadertrap code, second is the glsl code")
     ns = parser.parse_args(sys.argv[1:])
-    #os.chdir("../")
+    # os.chdir("../")
     if not ns.split_file and not ns.merge_files:
         print("Please precise the attempted operation, see the commandline option --help for more details")
     if ns.split_file and ns.merge_files:

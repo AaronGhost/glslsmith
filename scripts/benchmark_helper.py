@@ -2,9 +2,10 @@ import argparse
 import os
 import sys
 
+
 def main():
     parser = argparse.ArgumentParser(description="Counts the number of time a file is called")
-    parser.add_argument("--log", dest="log", default="log.txt")
+    parser.add_argument("--log", dest="log", default="log.txt", help="specify the log file")
     ns = parser.parse_args(sys.argv[1:])
     count_calls(ns.log)
 

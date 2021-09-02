@@ -18,14 +18,17 @@ from xml.dom import minidom
 import argparse
 import sys
 
+
 def main():
     parser = argparse.ArgumentParser(description="Configure and install the glslsmith scripts")
-    parser.add_argument("--configure-only", help="Skips the first installation part", dest="configureonly", action="store_true")
+    parser.add_argument("--configure-only", help="Skips the installation part", dest="configureonly",
+                        action="store_true")
 
     ns = parser.parse_args(sys.argv[1:])
 
     if not ns.configureonly:
-        print('This script helps to configure and install glslsmith, a random project generator built as part of graphicsfuzz')
+        print(
+            'This script helps to configure and install glslsmith, a random project generator built as part of graphicsfuzz')
         print('It has been sought as a way to provide system-dependent path to the execution scripts')
         print('All paths can be given as relative to this position or as absolute path')
 
@@ -33,32 +36,33 @@ def main():
 
         execute_with_popen(['git', 'submodule', 'init'])
         execute_with_popen(['git', 'submodule', 'update'])
-        #execute_with_popen(["mvn","-Dmaven.test.skip=true","-q", "-am","-pl",":graphicsfuzz", "package"],"./graphicsfuzz")
-        execute_with_popen(["mvn","-Dmaven.test.skip=true","-q", "install"],"./graphicsfuzz")
+        # execute_with_popen(["mvn","-Dmaven.test.skip=true","-q", "-am","-pl",":graphicsfuzz", "package"],"./graphicsfuzz")
+        execute_with_popen(["mvn", "-Dmaven.test.skip=true", "-q", "install"], "./graphicsfuzz")
 
     print('\n[2/5] Configuration of the generator working directories')
     print('Let any directory empty to use the default one which will be created in the project')
     mkdirs = []
     outputshaders = "./glslsmithoutput/shaders/"
-    input_value = input('Specify a location to dump the generated shaders (default: '+outputshaders+"): ")
+    input_value = input('Specify a location to dump the generated shaders (default: ' + outputshaders + "): ")
     if input_value != "":
         outputshaders = normalize_path(input_value)
     else:
         mkdirs.append(outputshaders)
     dumpbuffer = "./glslsmithoutput/buffers/"
-    input_value = input('Specify a location to dump the buffers from execution (default: '+dumpbuffer+"): ")
+    input_value = input('Specify a location to dump the buffers from execution (default: ' + dumpbuffer + "): ")
     if input_value != "":
         dumpbuffer = normalize_path(input_value)
     else:
         mkdirs.append(dumpbuffer)
     keptbuffer = "./glslsmithoutput/keptbuffers/"
-    input_value = input("Specify a location to dump the buffers exhibiting different values across compilers (default: "+keptbuffer+"): ")
+    input_value = input(
+        "Specify a location to dump the buffers exhibiting different values across compilers (default: " + keptbuffer + "): ")
     if input_value != "":
         keptbuffer = normalize_path(input_value)
     else:
         mkdirs.append(keptbuffer)
     keptshader = "./glslsmithoutput/keptshaders/"
-    input_value = input("Specify a location to dump the associated shaders (default: "+keptshader+"): ")
+    input_value = input("Specify a location to dump the associated shaders (default: " + keptshader + "): ")
     if input_value != "":
         keptshader = normalize_path(input_value)
     else:
@@ -66,11 +70,11 @@ def main():
     for mkdir_dir in mkdirs:
         current_dir = ""
         for dir in mkdir_dir.split("/"):
-            if dir != "." and not os.path.isdir(current_dir+"/"+dir):
+            if dir != "." and not os.path.isdir(current_dir + "/" + dir):
                 if current_dir == "":
                     execute_with_popen(["mkdir", dir])
                 else:
-                    execute_with_popen(["mkdir", dir],current_dir)
+                    execute_with_popen(["mkdir", dir], current_dir)
             current_dir += dir + "/"
 
     print("\n[3/5] Configuration of shader embedding language")
@@ -95,7 +99,7 @@ def main():
     compilers = []
 
     while True:
-        print("Enter the values for the compiler n°"+str(compiler_number)+":")
+        print("Enter the values for the compiler n°" + str(compiler_number) + ":")
         compiler_name = input("Specify the compiler name:")
         compiler_renderer = input("Specify the renderer string to validate the compiler:")
         angle_decision = input("Does the compiler require Angle? [y/N]:")
@@ -164,23 +168,23 @@ def main():
     # Install glsl-reduce as last-resort reducer
     if glslreduce_decision != "n" and glslreduce_decision != "N":
         reducers.append(["glsl-reduce",
-                         "mvn -f "+ os.getcwd()+ "/graphicsfuzz/pom.xml -pl "
-                         "reducer exec:java \"-Dexec.mainClass=com.graphicsfuzz.reducer.tool.GlslReduce\" "
-                         "\"-Dexec.args="+os.getcwd()+"test.json " +
-                            os.getcwd()+"interesting.sh --output=" + os.getcwd() + "\"",
+                         "mvn -f " + os.getcwd() + "/graphicsfuzz/pom.xml -pl "
+                                                   "reducer exec:java \"-Dexec.mainClass=com.graphicsfuzz.reducer.tool.GlslReduce\" "
+                                                   "\"-Dexec.args=" + os.getcwd() + "test.json " +
+                         os.getcwd() + "interesting.sh --output=" + os.getcwd() + "\"",
                          "interesting.sh",
                          "test.comp",
                          "test_reduced_final.comp", ["test.json"]])
     # Build xml file
 
     config_location = "./scripts/config.xml"
-    print("\nCurrent configuration will be saved to: "+config_location)
+    print("\nCurrent configuration will be saved to: " + config_location)
     impl = minidom.getDOMImplementation()
-    config_document = impl.createDocument(None, "config",None)
+    config_document = impl.createDocument(None, "config", None)
     # Dir settings
     dirsettings = config_document.createElement("dirsettings")
     graphicsfuzz = config_document.createElement("graphicsfuzz")
-    graphicsfuzz.appendChild(config_document.createTextNode(os.getcwd()+'/graphicsfuzz/'))
+    graphicsfuzz.appendChild(config_document.createTextNode(os.getcwd() + '/graphicsfuzz/'))
     dirsettings.appendChild(graphicsfuzz)
     execdir = config_document.createElement("execdir")
     execdir.appendChild(config_document.createTextNode(os.getcwd()))
@@ -227,10 +231,10 @@ def main():
             otherenvs.appendChild(length)
             i = 0
             for otherenv in compiler[5]:
-                otherenv_xml = config_document.createElement("env_"+str(i))
+                otherenv_xml = config_document.createElement("env_" + str(i))
                 otherenv_xml.appendChild(config_document.createTextNode(otherenv))
                 otherenvs.appendChild(otherenv_xml)
-                i+= 1
+                i += 1
         else:
             otherenvs.appendChild(config_document.createTextNode(" "))
         compiler_xml.appendChild(otherenvs)
@@ -282,7 +286,8 @@ def normalize_path(path):
 
 
 def execute_with_popen(cmdline, directory='./'):
-    process = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, cwd=directory)
+    process = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               universal_newlines=True, cwd=directory)
     print(subprocess.list2cmdline(process.args))
 
     while True:

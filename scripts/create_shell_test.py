@@ -15,19 +15,24 @@ import argparse
 import os
 import sys
 
-import common, reduction_helper
+import common
+import reduction_helper
 
 
 def main():
     parser = argparse.ArgumentParser(description="Build an interestingness test shell script for the given shader")
-    parser.add_argument("--override-compilers", dest="restrict_compilers", default=[], nargs="+")
-    parser.add_argument('--harness-name', dest='harness', default='test.shadertrap')
-    parser.add_argument('--shader-name', dest='shader', default='test.comp.glsl')
-    parser.add_argument('--no-post-processing', dest='postprocess',action='store_false')
-    parser.add_argument('--no-validation', dest='shadervalidation',action='store_false')
-    parser.add_argument('--shell-name', dest='shellname', default='interesting.sh')
-    parser.add_argument('--ref', type=int, dest="ref", default=-1)
-    parser.add_argument('--config-file', dest='config', default="config.xml")
+    parser.add_argument("--override-compilers", dest="restrict_compilers", default=[], nargs="+", help="TODO")
+    parser.add_argument('--harness-name', dest='harness', default='test.shadertrap',
+                        help="Configure the name  of the shadetrap file in the shell code")
+    parser.add_argument('--shader-name', dest='shader', default='test.comp.glsl',
+                        help="Configure the name of the shader (glsl) in the shell code")
+    parser.add_argument('--no-post-processing', dest='postprocess', action='store_false', help="TODO")
+    parser.add_argument('--no-validation', dest='shadervalidation', action='store_false', help="TODO")
+    parser.add_argument('--shell-name', dest='shellname', default='interesting.sh',
+                        help="Configure the name of the interestingness test to dump the code to")
+    parser.add_argument('--ref', type=int, dest="ref", default=-1, help="TODO")
+    parser.add_argument('--config-file', dest='config', default="config.xml",
+                        help="specify a different configuration file from the default")
     ns = parser.parse_args(sys.argv[1:])
     # Parse directory config
     exec_dirs = common.load_dir_settings(ns.config)
@@ -39,25 +44,26 @@ def main():
     os.chdir(exec_dirs.execdir)
     build_shell_test(compilers_dict, exec_dirs, ns.harness, ns.shader, ns.ref, ns.shellname)
 
+
 def build_shell_test(compilers_dict, exec_dirs, harness_name, shader_name, ref, shell_file, instrumentation=""):
     # Collect error code from the reduction process
     try:
-        reduction_helper.execute_reduction(compilers_dict, exec_dirs, harness_name, ref,True, True)
+        reduction_helper.execute_reduction(compilers_dict, exec_dirs, harness_name, ref, True, True)
     except SystemExit as e:
         error_code = str(e)
-        print("Detected error code: "+error_code)
+        print("Detected error code: " + error_code)
         shell = open(shell_file, 'w')
         # Sets structure
         shell.write("#!/usr/bin/env bash\n")
         shell.write("set -o pipefail\n")
         shell.write("set -o nounset\n")
         shell.write("set -o errexit\n")
-        shell.write("ROOT=\""+os.getcwd()+"\"\n")
-        shell.write("ERROR_CODE=\""+str(error_code)+"\"\n")
+        shell.write("ROOT=\"" + os.getcwd() + "\"\n")
+        shell.write("ERROR_CODE=\"" + str(error_code) + "\"\n")
         # Choose the shader name (glsl-reduce support)
         shell.write("if [ $# -eq 0 ]\n")
         shell.write("then\n")
-        shell.write("SHADER=\""+shader_name+"\"\n")
+        shell.write("SHADER=\"" + shader_name + "\"\n")
         shell.write("else\n")
         shell.write("SHADER_ROOT=(${1//./ })\n")
         shell.write("SHADER=\"${SHADER_ROOT}.comp\"\n")
@@ -67,7 +73,8 @@ def build_shell_test(compilers_dict, exec_dirs, harness_name, shader_name, ref, 
         # Check that main remains
         shell.write("cat \"$SHADER\" | grep \"main\"\n")
         # Call merger
-        shell.write("python3 ${ROOT}/scripts/splitter_merger.py --merge "+"${ROOT}/"+harness_name + " \"$SHADER\"\n")
+        shell.write(
+            "python3 ${ROOT}/scripts/splitter_merger.py --merge " + "${ROOT}/" + harness_name + " \"$SHADER\"\n")
         # Call reduction script to check for error code
         # TODO use only restricted compiler set
         shell.write("ERROR_CODE_IN_FILE=$( (python3 ${ROOT}/scripts/reduction_helper.py --config-file ${"
