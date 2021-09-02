@@ -23,8 +23,8 @@ import common
 # Compiler codes are defined by the order of the compiler in the config file and only the first to fail is reported
 # All crash: 1000
 # crash / execution error: 1000 + compiler codes (by power of two)
-# timeout: 2000 + compiler code
-# Miscompilation on one compiler: 3000 + compiler code
+# timeout: 2000 + compiler code (by power of two)
+# Miscompilation on one compiler: 3000 + compiler code (by power of two)
 # Angle vs other Compilation: 3099
 # Other differences across compilation: 4000
 # Difference across specific reference and current compilation (dead code removal): 5000 + compiler code
@@ -100,7 +100,7 @@ def execute_reduction(compilers_dict,exec_dirs,shader_name, ref, clean_dir, post
                 compiler_name = comparison_result[1][0].split("_")[1].split(".")[0]
             if clean_dir:
                 common.clean_files(os.getcwd(),common.find_buffer_file(os.getcwd()))
-            sys.exit(str(3000+compilers_dict[compiler_name].compilercode))
+            sys.exit(str(3000+1 << compilers_dict[compiler_name].compilercode))
         # Try if we are in the angle case
         if (all(compilers_dict[buffer_name.split("_")[1].split(".")[0]].type == "angle"
                 for buffer_name in comparison_result[0])

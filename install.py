@@ -73,7 +73,6 @@ def main():
                     execute_with_popen(["mkdir", dir],current_dir)
             current_dir += dir + "/"
 
-
     print("\n[3/5] Configuration of shader embedding language")
     print("At the moment, the only supported language to embed the shader is shadertrap")
     input_value = input("Please specify the path of the shadertrap executable: ")
@@ -91,7 +90,6 @@ def main():
     print("- VK_ICD_FILENAMES environment variable value")
     print("- other environment variables if necessary")
     print("\nIf an environment variable is not required, simply let the value empty")
-
 
     compiler_number = 1
     compilers = []
@@ -170,8 +168,9 @@ def main():
                          "reducer exec:java \"-Dexec.mainClass=com.graphicsfuzz.reducer.tool.GlslReduce\" "
                          "\"-Dexec.args="+os.getcwd()+"test.json " +
                             os.getcwd()+"interesting.sh --output=" + os.getcwd() + "\"",
+                         "interesting.sh",
                          "test.comp",
-                         "", ["test.json"]])
+                         "test_reduced_final.comp", ["test.json"]])
     # Build xml file
 
     config_location = "./scripts/config.xml"
@@ -254,17 +253,17 @@ def main():
         extrafiles = config_document.createElement("extra_files")
         if reducer[5]:
             length = config_document.createElement("length")
-            length.appendChild(config_document.createTextNode(len(reducer[5])))
-            otherenvs.appendChild(length)
+            length.appendChild(config_document.createTextNode(str(len(reducer[5]))))
+            extrafiles.appendChild(length)
             i = 0
             for extra_file in reducer[5]:
                 extra_file_xml = config_document.createElement("file_" + str(i))
                 extra_file_xml.appendChild(config_document.createTextNode(extra_file))
-                otherenvs.appendChild(extra_file_xml)
+                extrafiles.appendChild(extra_file_xml)
                 i += 1
         else:
-            otherenvs.appendChild(config_document.createTextNode(" "))
-        reducer_xml.appendChild(otherenvs)
+            extrafiles.appendChild(config_document.createTextNode(" "))
+        reducer_xml.appendChild(extrafiles)
         reducers_xml.appendChild(reducer_xml)
 
     config_document.documentElement.appendChild(dirsettings)
@@ -274,7 +273,6 @@ def main():
     # Dump xml file
     config_file = open(config_location, "w")
     config_file.write(config_document.toprettyxml())
-
 
 
 def normalize_path(path):
@@ -303,6 +301,7 @@ def execute_with_popen(cmdline, directory='./'):
                 if line.strip() != "":
                     print(output.strip())
             break
+
 
 if __name__ == "__main__":
     main()
