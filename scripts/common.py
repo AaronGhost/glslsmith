@@ -209,11 +209,21 @@ def execute_compilation(compilers, graphicsfuzz, shadertrap, shadername, output_
             file_result = "buffer_"+compiler.name + ".txt"
         # Register the resulting buffer as a result instead of a temporary buffer (ie: buffer_1 etc...)
         resulting_buffers.append(file_result)
-        # Execute the correct cmd command
-        cmd_ending = [shadertrap,"--require-vendor-renderer-substring",compiler.renderer, shader_to_compile]
-        cmd = build_env_from_compiler(compiler) + cmd_ending
         try:
-            process_return = run(cmd, capture_output=True, text=True, timeout=timeout)
+            if compiler.type == "android":
+                run(["adb", "push", shader_to_compile, "/data/local/tmp/test.shadertrap"], capture_output=True, text=True)
+                # The Android ShaderTrap binary is assumed to be present at /data/local/tmp
+                process_return = run(["adb", "shell", "cd /data/local/tmp && ./shadertrap --require-vendor-renderer-substring " + compiler.renderer + " test.shadertrap"], capture_output=True, text=True, timeout=timeout)
+                ls_return = run(["adb", "shell", "ls", "/data/local/tmp/buffer_*"], capture_output=True, text=True)
+                for buffer_file in ls_return.stdout.split():
+                    run(["adb", "pull", buffer_file], capture_output=True, text=True)
+                run(["adb", "shell", "rm", "/data/local/tmp/buffer_*"], capture_output=True, text=True)
+                run(["adb", "shell", "rm", "/data/local/tmp/test.shadertrap"], capture_output=True, text=True)
+            else:
+                # Execute the correct cmd command
+                cmd_ending = [shadertrap,"--require-vendor-renderer-substring",compiler.renderer, shader_to_compile]
+                cmd = build_env_from_compiler(compiler) + cmd_ending
+                process_return = run(cmd, capture_output=True, text=True, timeout=timeout)
         # Catch timeouts (post-processed shaders should not contain any)
         except subprocess.TimeoutExpired:
             print("Timeout reached on shader "+ shadername + " with " + compiler.name)

@@ -107,12 +107,20 @@ def main():
             # Validate compilers on an empty program instance
             if validate_compilers:
                 for compiler in compilers:
-                    cmd_ending = [exec_dirs.shadertrap, "--show-gl-info", "--require-vendor-renderer-substring",
-                                  compiler.renderer, "scripts/empty.shadertrap"]
-                    cmd = common.build_env_from_compiler(compiler) + cmd_ending
-                    process_return = run(cmd, capture_output=True, text=True)
-                    buffers = common.find_buffer_file(os.getcwd())
-                    common.clean_files(os.getcwd(), buffers)
+                    if compiler.type == "android":
+                        run(["adb", "push", "scripts/empty.shadertrap", "/data/local/tmp/test.shadertrap"], capture_output=True, text=True)
+                        # The Android ShaderTrap binary is assumed to be present at /data/local/tmp
+
+                        process_return = run(["adb", "shell", "/data/local/tmp/shadertrap", "--show-gl-info", "--require-vendor-renderer-substring",
+                                              compiler.renderer, "/data/local/tmp/test.shadertrap"], capture_output=True, text=True)
+                        run(["adb", "shell", "rm", "/data/local/tmp/test.shadertrap"])
+                    else:
+                        cmd_ending = [exec_dirs.shadertrap, "--show-gl-info", "--require-vendor-renderer-substring",
+                                      compiler.renderer, "scripts/empty.shadertrap"]
+                        cmd = common.build_env_from_compiler(compiler) + cmd_ending
+                        process_return = run(cmd, capture_output=True, text=True)
+                        buffers = common.find_buffer_file(os.getcwd())
+                        common.clean_files(os.getcwd(), buffers)
                     if compiler.renderer not in process_return.stdout:
                         print("compiler not found or not working: " + compiler.name)
                         print(process_return.stdout)

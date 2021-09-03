@@ -1,0 +1,44 @@
+<?xml version="1.0" ?>
+<config>
+	<dirsettings>
+		<graphicsfuzz>/home/afd/dev/glslsmith/graphicsfuzz/</graphicsfuzz>
+		<execdir>/home/afd/dev/glslsmith</execdir>
+		<shadertrap>/home/afd/dev/shadertrap/build/src/shadertrap/shadertrap</shadertrap>
+		<shaderoutput>./glslsmithoutput/shaders/</shaderoutput>
+		<dumpbufferdir>./glslsmithoutput/buffers/</dumpbufferdir>
+		<keptbufferdir>./glslsmithoutput/keptbuffers/</keptbufferdir>
+		<keptshaderdir>./glslsmithoutput/keptshaders/</keptshaderdir>
+	</dirsettings>
+	<compilers>
+		<compiler>
+			<name>NVIDIA</name>
+			<renderer>NVIDIA</renderer>
+			<type>independent</type>
+			<LD_LIBRARY_PATH> </LD_LIBRARY_PATH>
+			<VK_ICD_FILENAMES> </VK_ICD_FILENAMES>
+			<otherenvs> </otherenvs>
+		</compiler>
+		<compiler>
+			<name>pixel5</name>
+			<renderer>Qualcomm</renderer>
+			<type>android</type>
+			<LD_LIBRARY_PATH> </LD_LIBRARY_PATH>
+			<VK_ICD_FILENAMES> </VK_ICD_FILENAMES>
+			<otherenvs> </otherenvs>
+		</compiler>
+	</compilers>
+	<reducers>
+		<reducer>
+			<name>glsl-reduce</name>
+			<command>mvn -f /home/afd/dev/glslsmith/graphicsfuzz/pom.xml -pl reducer exec:java "-Dexec.mainClass=com.graphicsfuzz.reducer.tool.GlslReduce" -Dexec.args="/home/afd/dev/glslsmith/test.json /home/afd/dev/glslsmith/interesting.sh --output=/home/afd/dev/glslsmith"</command>
+			<interesting>interesting.sh</interesting>
+			<input_file>test.comp</input_file>
+			<output_file>test_reduced_final.comp</output_file>
+			<extra_files>
+				<length>1</length>
+				<file_0>test.json</file_0>
+			</extra_files>
+		</reducer>
+	</reducers>
+</config>
+
