@@ -110,7 +110,7 @@ def execute_reduction(compilers_dict, exec_dirs, shader_name, ref, clean_dir, po
                 compiler_name = comparison_result[1][0].split("_")[1].split(".")[0]
             if clean_dir:
                 common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))
-            sys.exit(str(3000 + 1 << compilers_dict[compiler_name].compilercode))
+            sys.exit(str(3000 + (1 << compilers_dict[compiler_name].compilercode)))
         # Try if we are in the angle case
         if (all(compilers_dict[buffer_name.split("_")[1].split(".")[0]].type == "angle"
                 for buffer_name in comparison_result[0])
