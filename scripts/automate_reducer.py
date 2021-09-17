@@ -2,6 +2,7 @@ import argparse
 import os
 import shlex
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -100,6 +101,9 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, r
     error_code_str = create_shell_test.build_shell_test(compilers, exec_dirs, "temp.shadertrap", reducer.input_file, ref
                                                         , reducer.interesting_test, instrumentation_filename)
     error_code = int(error_code_str[:4])
+    # Make sure the interestingness test is executable
+    interesting_test_stat = os.stat(reducer.interesting_test)
+    os.chmod(reducer.interesting_test, interesting_test_stat.st_mode | stat.S_IEXEC)
     common.clean_files(exec_dirs.execdir, common.find_buffer_file(exec_dirs.execdir))
     # Copy the input file to the output (prevents to destroy the harness through execution)
     shutil.copy(test_input, test_output)
@@ -115,6 +119,7 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, r
         ref_timestamp = time.time()
         print("Setup finished, beginning reduction")
         cmd = shlex.split(reducer.command)
+        print("Reducer command: " + " ".join(cmd))
         process = subprocess.run(cmd, stdout=sys.stdout, stderr=sys.stdout, universal_newlines=True,
                                  cwd=exec_dirs.execdir)
         # after execution concatenate back the result
