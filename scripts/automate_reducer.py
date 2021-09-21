@@ -80,7 +80,7 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, ref, reduce_
                       instrumentation=instrumentation)
 
         # copy back
-        if os.path.isfile(exec_dirs.execdir + "test_reduced.shadertrap"):
+        if os.path.isfile(exec_dirs.execdir + os.sep + "test_reduced.shadertrap"):
             shutil.copy("test_reduced.shadertrap",
                         exec_dirs.keptshaderdir + file_radix + override_prefix + ".shadertrap")
             # clean exec_dir
