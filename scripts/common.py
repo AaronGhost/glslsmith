@@ -20,27 +20,44 @@ from xml.dom import minidom
 import os
 
 
+class ShaderTool:
+    def __init__(self, name, path, file_extension):
+        self.name = name
+        self.path = path
+        self.file_extension = file_extension
+
+def load_shader_tools(filename):
+    xmldoc = minidom.parse(filename)
+    shadertools_xml = xmldoc.getElementsByTagName("shadertool")
+    shadertools = []
+    for shadertool in shadertools_xml:
+        name = shadertool.getElementsByTagName("name")[0].childNodes[0].data
+        path = shadertool.getElementsByTagName("path")[0].childNodes[0].data
+        file_extension = shadertool.getElementsByTagName("extension")[0].childNodes[0].data
+        shadertools.append(ShaderTool(name, path, file_extension))
+    return shadertools
+
+
 class DirSettings:
-    def __init__(self, graphcisfuzz, execdir, shadertrap, shaderoutput, dumpbufferdir, keptbufferdir, keptshaderdir):
+    def __init__(self, graphcisfuzz, execdir, shaderoutput, dumpbufferdir, keptbufferdir, keptshaderdir):
         self.graphicsfuzz = graphcisfuzz
         self.execdir = execdir
-        self.shadertrap = shadertrap
         self.shaderoutput = shaderoutput
         self.dumpbufferdir = dumpbufferdir
         self.keptbufferdir = keptbufferdir
         self.keptshaderdir = keptshaderdir
+
 
 def load_dir_settings(filename):
     xmldoc = minidom.parse(filename)
     dirs = xmldoc.getElementsByTagName("dirsettings")[0]
     graphicsfuzz = dirs.getElementsByTagName("graphicsfuzz")[0].childNodes[0].data
     execdir = dirs.getElementsByTagName("execdir")[0].childNodes[0].data
-    shadertrap = dirs.getElementsByTagName("shadertrap")[0].childNodes[0].data
     shaderoutput = dirs.getElementsByTagName("shaderoutput")[0].childNodes[0].data
     dumpbufferdir = dirs.getElementsByTagName("dumpbufferdir")[0].childNodes[0].data
     keptbufferdir = dirs.getElementsByTagName("keptbufferdir")[0].childNodes[0].data
     keptshaderdir = dirs.getElementsByTagName("keptshaderdir")[0].childNodes[0].data
-    return DirSettings(graphicsfuzz,execdir, shadertrap, shaderoutput, dumpbufferdir, keptbufferdir, keptshaderdir)
+    return DirSettings(graphicsfuzz,execdir, shaderoutput, dumpbufferdir, keptbufferdir, keptshaderdir)
 
 class Compiler:
     available_syscode = 1
@@ -153,11 +170,14 @@ def find_file(dir, prefix):
                 buffer_files.append(file)
     return buffer_files
 
+
 def find_buffer_file(dir):
     return find_file(dir, "buffer_")
 
+
 def find_test_file(dir):
     return find_file(dir, "test")
+
 
 def comparison_helper(files):
     comparison_values = []
@@ -177,7 +197,8 @@ def comparison_helper(files):
     return comparison_values
 
 
-def execute_compilation(compilers, graphicsfuzz, shadertrap, shadername, output_seed = "", move_dir = "./", verbose = False, timeout=10, postprocessing=True):
+def execute_compilation(compilers, graphicsfuzz, shader_tool, shadername, output_seed="", move_dir="./", verbose=False,
+                        timeout=10, postprocessing=True):
     no_compile_errors = []
     # Verify that the file exists
     if not os.path.isfile(shadername):
@@ -187,8 +208,9 @@ def execute_compilation(compilers, graphicsfuzz, shadertrap, shadername, output_
     # Call postprocessing using java
     shader_to_compile = shadername
     if postprocessing:
-        cmd = ["mvn", "-f", graphicsfuzz+"pom.xml","-pl","glslsmith", "-q","-e", "exec:java","-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler" ]
-        args = r'-Dexec.args=--src '+ str(shadername) + r' --dest tmp.shadertrap'
+        cmd = ["mvn", "-f", graphicsfuzz+"pom.xml", "-pl", "glslsmith", "-q", "-e", "exec:java",
+               "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler" ]
+        args = r'-Dexec.args=--src ' + str(shadername) + r' --dest tmp' + shader_tool.file_extension
         cmd += [args]
         process_return = run(cmd, capture_output=True, text=True)
         #print(process_return.stderr)
@@ -198,7 +220,7 @@ def execute_compilation(compilers, graphicsfuzz, shadertrap, shadername, output_
             print(process_return.stdout)
             print(shadername + " cannot be parsed for post-processing")
             return [False for _ in compilers]
-        shader_to_compile = "tmp.shadertrap"
+        shader_to_compile = "tmp" + shader_tool.file_extension
 
     # Call the compilation for each available compiler
     for compiler in compilers:
@@ -210,7 +232,10 @@ def execute_compilation(compilers, graphicsfuzz, shadertrap, shadername, output_
         # Register the resulting buffer as a result instead of a temporary buffer (ie: buffer_1 etc...)
         resulting_buffers.append(file_result)
         # Execute the correct cmd command
-        cmd_ending = [shadertrap,"--require-vendor-renderer-substring",compiler.renderer, shader_to_compile]
+        if shader_tool.name == "amber":
+            cmd_ending = [shader_tool.path, shader_to_compile]
+        else:
+            cmd_ending = [shader_tool.path,"--require-vendor-renderer-substring",compiler.renderer, shader_to_compile]
         cmd = build_env_from_compiler(compiler) + cmd_ending
         try:
             process_return = run(cmd, capture_output=True, text=True, timeout=timeout)

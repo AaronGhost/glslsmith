@@ -48,6 +48,8 @@ def main():
                         help="Enforce the reducer if reduction is applied, see --reduce")
     parser.add_argument('--reduce-timeout', dest="timeout", action="store_true",
                         help="Force the reducer to consider reduction of shaders that time out (DISCOURAGED)")
+    parser.add_argument('--host', dest='host', default="shadertrap",
+                        help="Specify the host language in which to embed the shader code")
     ns = parser.parse_args(sys.argv[1:])
     # temp value for compiler validation (not revalidating on loops)
     validate_compilers = ns.validatecompilers
@@ -55,6 +57,19 @@ def main():
     exec_dirs = common.load_dir_settings(ns.config)
     compilers = common.load_compilers_settings(ns.config)
     reducers = common.load_reducers_settings(ns.config)
+    shader_tools = common.load_shader_tools(ns.config)
+    shader_tool = shader_tools[0]
+    shadertrap = shader_tools[0]
+    shader_tool_found = False
+    for possible_tool in shader_tools:
+        if possible_tool.name == ns.host:
+            shader_tool_found = True
+            shader_tool = possible_tool
+        if possible_tool.name == "shadertrap":
+            shadertrap = possible_tool
+    if not shader_tool_found:
+        print("Host tool not configured / recognized defaulting to: " + shader_tool.name)
+
     if len(reducers) == 0:
         exit("No reducer has been declared at installation, please rerun installation or edit the configuration file")
     reducer = reducers[0]
@@ -86,10 +101,12 @@ def main():
                     ns.shadercount) + r' --output-directory ' + exec_dirs.shaderoutput
                 if ns.seed != -1:
                     args += r' --seed ' + str(ns.seed)
+                if ns.host != "shadertrap":
+                    args += r' --printer' + str(ns.host)
                 cmd += [args]
 
                 process_return = run(cmd, capture_output=True, text=True)
-                if ("ERROR") in process_return.stdout:
+                if "ERROR" in process_return.stdout:
                     print("error with glslsmith, please fix them before running the script again")
                     print(process_return.stdout)
                     return
@@ -106,9 +123,9 @@ def main():
             if ns.syntaxonly:
                 # Execute the program with the default implementation
                 for i in range(ns.shadercount):
-                    result = common.execute_compilation([compilers[0]], exec_dirs.graphicsfuzz, exec_dirs.shadertrap,
-                                                        exec_dirs.shaderoutput + "test_" + str(i) + ".shadertrap",
-                                                        verbose=True)
+                    result = common.execute_compilation(
+                        [compilers[0]], exec_dirs.graphicsfuzz, shader_tool, exec_dirs.shaderoutput + "test_" + str(i)
+                        + shader_tool.file_extension,verbose=True)
                     if result[0] != "no_crash":
                         print("Error on shader " + str(i))
                     else:
@@ -118,10 +135,12 @@ def main():
                 common.clean_files(os.getcwd(), buffers)
                 print("Compilation of all programs done")
                 return
+
             # Validate compilers on an empty program instance
             if validate_compilers:
                 for compiler in compilers:
-                    cmd_ending = [exec_dirs.shadertrap, "--show-gl-info", "--require-vendor-renderer-substring",
+                    print("Validate compilers with shadertrap")
+                    cmd_ending = [shadertrap.path, "--show-gl-info", "--require-vendor-renderer-substring",
                                   compiler.renderer, "scripts/empty.shadertrap"]
                     cmd = common.build_env_from_compiler(compiler) + cmd_ending
                     process_return = run(cmd, capture_output=True, text=True)
@@ -138,9 +157,9 @@ def main():
             common.clean_files(exec_dirs.dumpbufferdir, buffers)
             # Execute program compilation on each compiler and save the results for the batch
             for i in range(ns.shadercount):
-                common.execute_compilation(compilers, exec_dirs.graphicsfuzz, exec_dirs.shadertrap,
-                                           exec_dirs.shaderoutput + "test_" + str(i) + ".shadertrap", str(i),
-                                           exec_dirs.dumpbufferdir, True)
+                common.execute_compilation(compilers, exec_dirs.graphicsfuzz, shader_tool,
+                                           exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
+                                           str(i), exec_dirs.dumpbufferdir, True)
         # Compare outputs and save buffers
         # Check that we can compare outputs across multiple compilers
         if len(compilers) == 1:
@@ -157,9 +176,9 @@ def main():
             if len(values) != 1:
                 print("Different results across implementations for shader " + str(seed + i))
                 # Move shader
-                identified_shaders.append(str(seed + i) + ".shadertrap")
-                shutil.move(exec_dirs.shaderoutput + "test_" + str(i) + ".shadertrap",
-                            exec_dirs.keptshaderdir + str(seed + i) + ".shadertrap")
+                identified_shaders.append(str(seed + i) + shader_tool.file_extension)
+                shutil.move(exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
+                            exec_dirs.keptshaderdir + str(seed + i) + shader_tool.file_extension)
                 # Move buffers
                 for compiler in compilers:
                     shutil.move(exec_dirs.dumpbufferdir + "buffer_" + compiler.name + "_" + str(i) + ".txt",
