@@ -44,28 +44,20 @@ def main():
                         help="Compare the combined buffer outputs to a reference file")
     parser.add_argument('--no-cleaning', dest='clean', action="store_false",
                         help="Do not clean buffers and post-processed shaders after execution")
-    parser.add_argument('--config-file', dest='config', default="config.xml",
-                        help="specify a different configuration file from the default")
-    ns = parser.parse_args(sys.argv[1:])
-    # Parse directory config
-    exec_dirs = common.load_dir_settings(ns.config)
-    compilers = common.load_compilers_settings(ns.config)
-    compilers_dict = {}
-    for compiler in compilers:
-        if not ns.restrict_compilers or compiler in ns.restrict_compilers:
-            compilers_dict[compiler.name] = compiler
-    os.chdir(exec_dirs.execdir)
-    execute_reduction(compilers_dict, exec_dirs, ns.shader, ns.ref, ns.clean, ns.postprocessing)
+
+    ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
+
+    execute_reduction(compilers_dict, exec_dirs, shader_tool, ns.shader, ns.ref, ns.clean, ns.postprocessing)
 
 
-def execute_reduction(compilers_dict, exec_dirs, shader_name, ref, clean_dir, postprocessing):
-    # Execute the shadertrap file with the different drivers
+def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref, clean_dir, postprocessing):
+    # Execute the host file with the different drivers
     common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))
     compilers = list(compilers_dict.values())
-    results = common.execute_compilation(compilers, exec_dirs.graphicsfuzz, exec_dirs.shadertrap, shader_name,
+    results = common.execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, shader_tool, shader_name,
                                          verbose=True, postprocessing=postprocessing)
     if clean_dir:
-        common.clean_files(os.getcwd(), ["tmp.shadertrap"])
+        common.clean_files(os.getcwd(), ["tmp" + shader_tool.file_extension])
     crash_flag = False
     all_crashed = True
     timeout_flag = False

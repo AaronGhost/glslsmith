@@ -40,41 +40,33 @@ def main():
                              "pass all to get the values for all compilers, and more_than_two for non-trivial case")
     parser.add_argument('--verbose', dest="verbose", action="store_true", help="Gives the detail of agreeing compiler "
                                                                                "for non-trivial case")
-    parser.add_argument('--config-file', dest='config', default="config.xml", help="Provides a different config file ")
-    ns = parser.parse_args(sys.argv[1:])
-    # Parse directory config
-    exec_dirs = common.load_dir_settings(ns.config)
-    compilers = common.load_compilers_settings(ns.config)
-    compilers_dict = {}
-    for compiler in compilers:
-        compilers_dict[compiler.name] = compiler
 
-    # Path can be relative to the root so move the execution path
-    os.chdir("../")
+    ns, exec_dirs, compilers_dict, _, shader_tool = common.env_setup(parser)
 
+    # Store names for the difference calculation
     compiler_differences = {}
-    for compiler in compilers:
-        compiler_differences[compiler.name] = 0
+    for compiler_name in compilers_dict:
+        compiler_differences[compiler_name] = 0
     compiler_differences["angle"] = 0
     compiler_differences["more_than_two"] = 0
     # Get a list of the files in the directory
     file_list = os.listdir(exec_dirs.keptbufferdir)
     seeds = []
+    any_name = next(iter(compilers_dict))
     for file in file_list:
         termination = file.split("_")[-1]
         compiler_radix = file.replace("_" + termination, "")
-        if compilers[0].name == compiler_radix:
+        if any_name == compiler_radix:
             seeds.append(termination.split(".")[0])
 
     print(str(len(seeds)) + " different seeds")
     for seed in seeds:
         correct_seed_buffers = []
-        for compiler in compilers:
-            correct_seed_buffers.append(exec_dirs.keptbufferdir + compiler.name + "_" + seed + ".txt")
+        for compiler_name in compilers_dict:
+            correct_seed_buffers.append(exec_dirs.keptbufferdir + compiler_name + "_" + seed + ".txt")
         results = common.comparison_helper(correct_seed_buffers)
         # Read back results from the comparison
         if len(results) == 2:
-            compiler_name = ""
             if len(results[0]) == 1 or len(results[1]) == 1:
                 if len(results[0]) == 1:
                     compiler_name = get_compiler_name_from_buffer(results[0][0])
@@ -85,6 +77,7 @@ def main():
                                                                        exec_dirs.keptshaderdir) + ", seed: " + seed)
                 compiler_differences[compiler_name] += 1
                 continue
+
             # Try if we are in the angle case
             if (all(compilers_dict[get_compiler_name_from_buffer(buffer_name)].type == "angle"
                     for buffer_name in results[0])
@@ -105,7 +98,7 @@ def main():
             print("More than two different values, lines: " + report_line_nb(seed, exec_dirs.keptshaderdir)
                   + ", seed: " + seed)
         if ns.verbose:
-            if len(results) == len(compilers):
+            if len(results) == len(compilers_dict):
                 print("all compilers disagree\n")
             else:
                 compilers_text = ""
@@ -117,7 +110,7 @@ def main():
                 compilers_text = compilers_text[:-2]
                 print(compilers_text + "\n")
 
-    for compiler_name in compilers_dict.keys():
+    for compiler_name in compilers_dict:
         print(compiler_name + " different values: " + str(compiler_differences[compiler_name]))
     print("angle different values: " + str(compiler_differences["angle"]))
     print("more than two groups of values: " + str(compiler_differences["more_than_two"]))
