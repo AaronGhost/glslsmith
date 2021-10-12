@@ -14,7 +14,6 @@
 import argparse
 import os
 import sys
-
 import common
 import reduction_helper
 
@@ -31,24 +30,17 @@ def main():
     parser.add_argument('--shell-name', dest='shellname', default='interesting.sh',
                         help="Configure the name of the interestingness test to dump the code to")
     parser.add_argument('--ref', type=int, dest="ref", default=-1, help="TODO")
-    parser.add_argument('--config-file', dest='config', default="config.xml",
-                        help="specify a different configuration file from the default")
-    ns = parser.parse_args(sys.argv[1:])
-    # Parse directory config
-    exec_dirs = common.load_dir_settings(ns.config)
-    compilers = common.load_compilers_settings(ns.config)
-    compilers_dict = {}
-    for compiler in compilers:
-        if not ns.restrict_compilers or compiler in ns.restrict_compilers:
-            compilers_dict[compiler.name] = compiler
-    os.chdir(exec_dirs.execdir)
-    build_shell_test(compilers_dict, exec_dirs, ns.harness, ns.shader, ns.ref, ns.shellname)
+
+    ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
+
+    build_shell_test(compilers_dict, exec_dirs, shader_tool, ns.harness, ns.shader, ns.ref, ns.shellname)
 
 
-def build_shell_test(compilers_dict, exec_dirs, harness_name, shader_name, ref, shell_file, instrumentation=""):
+def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shader_name, ref, shell_file,
+                     instrumentation=""):
     # Collect error code from the reduction process
     try:
-        reduction_helper.execute_reduction(compilers_dict, exec_dirs, harness_name, ref, True, True)
+        reduction_helper.execute_reduction(compilers_dict, exec_dirs, shader_tool, harness_name, ref, True, True)
     except SystemExit as e:
         error_code = str(e)
         print("Detected error code: " + error_code)
@@ -74,11 +66,13 @@ def build_shell_test(compilers_dict, exec_dirs, harness_name, shader_name, ref, 
         shell.write("cat \"$SHADER\" | grep \"main\"\n")
         # Call merger
         shell.write(
-            "python3 ${ROOT}/scripts/splitter_merger.py --merge " + "${ROOT}/" + harness_name + " \"$SHADER\"\n")
+            "python3 ${ROOT}/scripts/splitter_merger.py --config-file ${ROOT}/scripts/config.xml --merge " + "${ROOT}/"
+            + harness_name + " \"$SHADER\"\n")
         # Call reduction script to check for error code
         # TODO use only restricted compiler set
         shell.write("ERROR_CODE_IN_FILE=$( (python3 ${ROOT}/scripts/reduction_helper.py --config-file ${"
-                    "ROOT}/scripts/config.xml --shader-name ${ROOT}/" + harness_name + " 2>&1 > /dev/null) || true)\n")
+                    "ROOT}/scripts/config.xml --shader-name ${ROOT}/" + harness_name + " --host " + shader_tool.name
+                    + " 2>&1 > /dev/null) || true)\n")
         shell.write("echo $ERROR_CODE_IN_FILE\n")
         shell.write("if [ \"$ERROR_CODE_IN_FILE\" == \"$ERROR_CODE\" ]\nthen\n    exit 0\nelse\n    exit 1\nfi\n")
         shell.close()

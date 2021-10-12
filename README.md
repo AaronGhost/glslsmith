@@ -141,7 +141,6 @@ python3 automate_reducer.py --batch-reduction --instrumentation
 	<dirsettings>
 		<graphicsfuzz>[ROOT]/graphicsfuzz/</graphicsfuzz>
 		<execdir>[ROOT]</execdir>
-		<shadertrap>[shadertrap]/build/src/shadertrap/shadertrap</shadertrap>
 		<shaderoutput>./glslsmithoutput/shaders/</shaderoutput>
 		<dumpbufferdir>./glslsmithoutput/buffers/</dumpbufferdir>
 		<keptbufferdir>./glslsmithoutput/keptbuffers/</keptbufferdir>
@@ -173,6 +172,18 @@ python3 automate_reducer.py --batch-reduction --instrumentation
 			<otherenvs> </otherenvs>
 		</compiler>
 	</compilers>
+	<shadertools>
+		<shadertool>
+			<name>shadertrap</name>
+			<path>[shadertrap]/build/src/shadertrap/shadertrap</path>
+			<extension>.shadertrap</extension>
+		</shadertool>
+		<shadertool>
+			<name>amber</name>
+			<path>[amber]/out/Debug/amber</path>
+			<extension>.amber</extension>
+		</shadertool>
+	</shadertools>
 	<reducers>
 		<reducer>
 			<name>glsl-reduce</name>

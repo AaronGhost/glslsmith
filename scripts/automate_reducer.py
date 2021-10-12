@@ -15,8 +15,6 @@ import splitter_merger
 
 def main():
     parser = argparse.ArgumentParser(description="Automates the reduction of a shadertrap file")
-    parser.add_argument('--config-file', dest='config', default="config.xml",
-                        help="specify a different configuration file from the default")
     parser.add_argument("--test-file-name", dest="test_file", default="test_original.shadertrap",
                         help="specify a test file to reduce (by default: test_original.shadertrap)")
     parser.add_argument("--reducer", dest="reducer", default="glsl-reduce",
@@ -31,75 +29,57 @@ def main():
                         help="forces the reducer to attempt to reduce shaders which time out")
     parser.add_argument("--instrumentation", dest="instru", action="store_true",
                         help="adds an extra line in the shell script to generate a reduction log file")
-    ns = parser.parse_args(sys.argv[1:])
-
-    reducers = common.load_reducers_settings(ns.config)
-    compilers = common.load_compilers_settings(ns.config)
-    exec_dirs = common.load_dir_settings(ns.config)
-    os.chdir(exec_dirs.execdir)
-    if len(reducers) == 0:
-        exit("No reducer has been declared at installation, please rerun installation or edit the configuration file")
-    reducer = reducers[0]
-    if ns.reducer != "":
-        reducer_found = False
-        for existing_reducer in reducers:
-            if existing_reducer.name == ns.reducer:
-                reducer = existing_reducer
-                reducer_found = True
-        if not reducer_found:
-            exit("No reducer named " + str(ns.reducer) + " configured")
-    compilers_dict = {}
-    for compiler in compilers:
-        compilers_dict[compiler.name] = compiler
+    ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
     if ns.batch:
         files_to_reduce = os.listdir(exec_dirs.keptshaderdir)
         # Exclude files that have been already reduced
         for file in list(files_to_reduce):
             if os.path.isfile(exec_dirs.keptshaderdir + file) and len(file.split("_")) > 1:
                 files_to_reduce.remove(file)
-                if os.path.isfile(exec_dirs.keptshaderdir + file.split("_")[0] + ".shadertrap"):
-                    files_to_reduce.remove(file.split("_")[0] + ".shadertrap")
+                if os.path.isfile(exec_dirs.keptshaderdir + file.split("_")[0] + shader_tool.file_extension):
+                    files_to_reduce.remove(file.split("_")[0]  + shader_tool.file_extension)
 
-        batch_reduction(reducer, compilers_dict, exec_dirs, files_to_reduce, ns.ref, ns.timeout,
+        batch_reduction(reducer, compilers_dict, exec_dirs, files_to_reduce, shader_tool, ns.ref, ns.timeout,
                         instrumentation=ns.instru)
     else:
-        run_reduction(reducer, compilers_dict, exec_dirs, ns.test_file, ns.output_file, ns.ref, ns.timeout,
+        run_reduction(reducer, compilers_dict, exec_dirs, ns.test_file, ns.output_file, shader_tool, ns.ref, ns.timeout,
                       instrumentation=ns.instru)
 
 
-def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, ref, reduce_timeout, override_prefix="_reduced",
+def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool, ref, reduce_timeout, override_prefix="_reduced",
                     instrumentation=False):
     for file in files_to_reduce:
         # copy file to exec_dir
         file_radix = file.split(".")[0]
         print("Reduction of " + exec_dirs.keptshaderdir + file)
-        shutil.copy(exec_dirs.keptshaderdir + file, "original_test.shadertrap")
+        shutil.copy(exec_dirs.keptshaderdir + file, "original_test" + shader_tool.file_extension)
         # run reduction
-        run_reduction(reducer, compilers, exec_dirs, "original_test.shadertrap", "test_reduced.shadertrap", ref,
-                      reduce_timeout, log_file=reducer.name + "_" + file_radix + ".log",
+        run_reduction(reducer, compilers, exec_dirs, "original_test" + shader_tool.file_extension, "test_reduced" + shader_tool.file_extension, shader_tool,
+                      ref, reduce_timeout, log_file=reducer.name + "_" + file_radix + ".log",
                       instrumentation=instrumentation)
 
         # copy back
-        if os.path.isfile(exec_dirs.execdir + os.sep + "test_reduced.shadertrap"):
-            shutil.copy("test_reduced.shadertrap",
-                        exec_dirs.keptshaderdir + file_radix + override_prefix + ".shadertrap")
+        if os.path.isfile(exec_dirs.execdir + os.sep + "test_reduced" + shader_tool.file_extension):
+            shutil.copy("test_reduced" + shader_tool.file_extension,
+                        exec_dirs.keptshaderdir + file_radix + override_prefix + shader_tool.file_extension)
             # clean exec_dir
-            common.clean_files(os.getcwd(), ["test_reduced.shadertrap"])
+            common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
 
 
-def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, reduce_timeout, log_file="",
+def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader_tool, ref, reduce_timeout, log_file="",
                   instrumentation=True):
     # Builds the interestingness test
     print("Building the interesting shell script")
     # Builds a temp harness
-    shutil.copy(test_input, "temp.shadertrap")
+    shutil.copy(test_input, "temp" + shader_tool.file_extension)
 
     # Accounts for instrumentation
     instrumentation_filename = log_file
     if instrumentation and instrumentation_filename == "":
         instrumentation_filename = reducer.name + "_" + test_input + ".log"
-    error_code_str = create_shell_test.build_shell_test(compilers, exec_dirs, "temp.shadertrap", reducer.input_file, ref
-                                                        , reducer.interesting_test, instrumentation_filename)
+    error_code_str = create_shell_test.build_shell_test(compilers, exec_dirs, shader_tool, "temp" + shader_tool.file_extension,
+                                                        reducer.input_file, ref, reducer.interesting_test,
+                                                        instrumentation_filename)
     error_code = int(error_code_str[:4])
     # Make sure the interestingness test is executable
     interesting_test_stat = os.stat(reducer.interesting_test)
@@ -113,7 +93,7 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, r
             json_file.write("{}")
             json_file.close()
         # extract the shader code using the splitter and name it as input_file
-        splitter_merger.split(test_input, reducer.input_file)
+        splitter_merger.split(shader_tool, test_input, reducer.input_file)
 
         # perform the reduction using the reduction launch command
         ref_timestamp = time.time()
@@ -124,7 +104,7 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, r
                                  cwd=exec_dirs.execdir)
         # after execution concatenate back the result
         if os.path.isfile(reducer.output_files):
-            splitter_merger.merge(test_output, reducer.output_files)
+            splitter_merger.merge(shader_tool, test_output, reducer.output_files)
             end_timestamp = time.time()
             delta = timedelta(seconds=end_timestamp - ref_timestamp)
             print("Reduction finished in " + str(delta))
@@ -134,17 +114,17 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, ref, r
                 f.close()
         else:
             print("Reduction failed for shader")
-            common.clean_files(os.getcwd(), ["test_reduced.shadertrap"])
+            common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
     elif error_code >= 2000:
         print("Skipping test-case reduction for timeout shader")
-        common.clean_files(os.getcwd(), ["test_reduced.shadertrap"])
+        common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
     else:
         print("No error on the current shader")
-        common.clean_files(os.getcwd(), ["test_reduced.shadertrap"])
+        common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
 
     # Cleans the current repository
     common.clean_files(os.getcwd(),
-                       ["temp.shadertrap", reducer.input_file, reducer.output_files, reducer.interesting_test])
+                       ["temp" + shader_tool.file_extension, reducer.input_file, reducer.output_files, reducer.interesting_test])
     residues = common.find_test_file(os.getcwd())
     if test_output in residues:
         residues.remove(test_output)
