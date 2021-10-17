@@ -59,7 +59,7 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool,
                       instrumentation=instrumentation)
 
         # copy back
-        if os.path.isfile(exec_dirs.execdir + "test_reduced" + shader_tool.file_extension):
+        if os.path.isfile(exec_dirs.execdir + os.sep + "test_reduced" + shader_tool.file_extension):
             shutil.copy("test_reduced" + shader_tool.file_extension,
                         exec_dirs.keptshaderdir + file_radix + override_prefix + shader_tool.file_extension)
             # clean exec_dir
