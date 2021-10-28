@@ -250,6 +250,11 @@ def env_setup(parser):
     return ns, exec_dirs, compilers_dict, reducer, shader_tool
 
 
+def find_amber_buffers(shader_to_compile):
+    with open(shader_to_compile) as f:
+        return re.findall(r"BUFFER (.+) AS storage DESCRIPTOR_SET (.*) BINDING (.*)", f.read())
+
+
 def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, output_seed="", move_dir="./", verbose=False,
                         timeout=10, postprocessing=True):
     no_compile_errors = []
@@ -290,10 +295,14 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
             if compiler.type == "android":
                 run(["adb", "push", shader_to_compile, "/data/local/tmp/test" + shader_tool.file_extension],
                     capture_output=True, text=True)
-                # The Android ShaderTrap binary is assumed to be present at /data/local/tmp
+                # The Android ShaderTrap and Amber binaries are assumed to be present at /data/local/tmp
                 if shader_tool.name == "amber":
-                    # TODO add parsing for buffers with amber
-                    process_return = run(["adb", "shell", "cd /data/local/tmp && ./amber test.amber"])
+                    amber_command = "./amber -d"
+                    for buffer_name, descriptor_set, binding in find_amber_buffers(shader_to_compile):
+                        amber_command += " -b " + buffer_name + " -B " + binding
+                    amber_command += " test.amber"
+                    process_return = run(["adb", "shell", "cd /data/local/tmp && " + amber_command], capture_output=True, text=True,
+                                         timeout=timeout)
                 else:
                     process_return = run(["adb", "shell",
                                           "cd /data/local/tmp && ./shadertrap --require-vendor-renderer-substring "
@@ -308,10 +317,8 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
             else:
                 # Execute the correct cmd command
                 if shader_tool.name == "amber":
-                    f = open(shader_to_compile)
-                    buffers = re.findall(r"BUFFER (.+) AS storage DESCRIPTOR_SET (.*) BINDING (.*)", f.read())
-                    f.close()
-                    cmd_ending = [shader_tool.path]
+                    buffers = find_amber_buffers(shader_to_compile)
+                    cmd_ending = [shader_tool.path, "-d"]
                     for buffer_name, descriptor_set, binding in buffers:
                         cmd_ending += ["-b",buffer_name,"-B",binding]
                     cmd_ending.append(shader_to_compile)
