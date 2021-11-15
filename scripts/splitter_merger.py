@@ -19,13 +19,13 @@ import common
 
 
 def get_glslcode_from_shadertrap(shadertrap_text):
-    shadertrap_reg = re.compile(r".*DECLARE_SHADER shader KIND COMPUTE\n(.*)END.*", re.DOTALL)
+    shadertrap_reg = re.compile(r".*DECLARE_SHADER shader KIND COMPUTE\n(.*)END\n.*", re.DOTALL)
     match_object = shadertrap_reg.match(shadertrap_text)
     return match_object.group(1)
 
 
 def get_glslcode_from_amber(amber_text):
-    amber_reg = re.compile(r"SHADER compute computeShader GLSL\n(.*?)END", re.DOTALL)
+    amber_reg = re.compile(r"SHADER compute computeShader GLSL\n(.*?)END\n", re.DOTALL)
     match_object = amber_reg.search(amber_text)
     return match_object.group(1)
 
