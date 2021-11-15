@@ -46,6 +46,10 @@ def main():
                         help="Enforce the reducer if reduction is applied, see --reduce")
     parser.add_argument('--reduce-timeout', dest="timeout", action="store_true",
                         help="Force the reducer to consider reduction of shaders that time out (DISCOURAGED)")
+    parser.add_argument('--reduce-wrappers', dest='double_run', action='store_true',
+                        help="Run the reconditioning step twice, reducing the number of wrappers on the second run")
+    parser.add_argument('--verbose', dest='verbose', action='store_true',
+                        help="Provide more logging information about the executed command")
 
     ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
 
@@ -75,7 +79,7 @@ def main():
 
                 process_return = run(cmd, capture_output=True, text=True)
                 if "ERROR" in process_return.stdout:
-                    print("error with glslsmith, please fix them before running the script again")
+                    print("error with glslsmith generator, please fix them before running the script again")
                     print(process_return.stdout)
                     return
                 for line in process_return.stdout.split("\n"):
@@ -93,7 +97,7 @@ def main():
                 for i in range(ns.shadercount):
                     result = common.execute_compilation(
                         [compilers_dict.values()[0]], exec_dirs.graphicsfuzz, shader_tool,
-                        exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,verbose=True)
+                        exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension, verbose=True)
                     if result[0] != "no_crash":
                         print("Error on shader " + str(i))
                     else:
@@ -134,13 +138,15 @@ def main():
                             return
                     print("compilers validated")
                     validate_compilers = False
+
             buffers = common.find_buffer_file(exec_dirs.dumpbufferdir)
             common.clean_files(exec_dirs.dumpbufferdir, buffers)
             # Execute program compilation on each compiler and save the results for the batch
             for i in range(ns.shadercount):
                 common.execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, shader_tool,
                                            exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
-                                           str(i), exec_dirs.dumpbufferdir, True)
+                                           str(i), exec_dirs.dumpbufferdir, verbose=ns.verbose,
+                                           double_run=ns.double_run, postprocessing=True)
         # Compare outputs and save buffers
         # Check that we can compare outputs across multiple compilers
         if len(compilers_dict) == 1:
