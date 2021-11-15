@@ -44,7 +44,6 @@ def main():
                         help="Compare the combined buffer outputs to a reference file")
     parser.add_argument('--no-cleaning', dest='clean', action="store_false",
                         help="Do not clean buffers and post-processed shaders after execution")
-
     ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
 
     execute_reduction(compilers_dict, exec_dirs, shader_tool, ns.shader, ns.ref, ns.clean, ns.postprocessing)

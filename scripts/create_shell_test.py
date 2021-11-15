@@ -57,7 +57,7 @@ def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shade
         shell.write("then\n")
         shell.write("SHADER=\"" + shader_name + "\"\n")
         shell.write("else\n")
-        shell.write("SHADER_ROOT=(${1//./ })\n")
+        shell.write("SHADER_ROOT=$(echo $1 | sed -e 's/\.[^.]*$//')\n")
         shell.write("SHADER=\"${SHADER_ROOT}.comp\"\n")
         shell.write("fi\n")
         if instrumentation != "":

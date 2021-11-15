@@ -250,8 +250,82 @@ def env_setup(parser):
     return ns, exec_dirs, compilers_dict, reducer, shader_tool
 
 
+def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, verbose = False):
+    try:
+        if compiler.type == "android":
+            run(["adb", "push", shader_to_compile, "/data/local/tmp/test" + shader_tool.file_extension],
+                capture_output=True, text=True)
+            # The Android ShaderTrap binary is assumed to be present at /data/local/tmp
+            if shader_tool.name == "amber":
+                # TODO add parsing for buffers with amber
+                process_return = run(["adb", "shell", "cd /data/local/tmp && ./amber test.amber"])
+            else:
+                process_return = run(["adb", "shell",
+                                      "cd /data/local/tmp && ./shadertrap --require-vendor-renderer-substring "
+                                      + compiler.renderer + " test.shadertrap"], capture_output=True, text=True,
+                                     timeout=timeout)
+            if run_type == "add_id":
+                run(["adb", "pull", "ids.txt"], capture_output=True, text=True)
+                run(["adb", "shell", "rm", "/data/local/tmp/buffer_*"], capture_output=True, text=True)
+            else:
+                ls_return = run(["adb", "shell", "ls", "/data/local/tmp/buffer_*"], capture_output=True, text=True)
+                for buffer_file in ls_return.stdout.split():
+                    run(["adb", "pull", buffer_file], capture_output=True, text=True)
+                run(["adb", "shell", "rm", "/data/local/tmp/buffer_*"], capture_output=True, text=True)
+                run(["adb", "shell", "rm", "/data/local/tmp/test" + shader_tool.file_extension], capture_output=True,
+                    text=True)
+        else:
+            # Execute the correct cmd command
+            if shader_tool.name == "amber":
+                # TODO only the last buffer_name is effectively dumped (contain multiple binding) => b token useless
+                f = open(shader_to_compile)
+                cmd_ending = [shader_tool.path]
+
+                if run_type == "add_id":
+                    buffers = re.findall(r"BUFFER buffer_ids AS storage DESCRIPTOR_SET (.*) BINDING (.*)", f.read())
+                    descriptor_set, binding = buffers[0]
+                    cmd_ending += ["-b", "buffer_ids.txt", "-B", binding]
+                else:
+                    buffers = re.findall(r"BUFFER (.+) AS storage DESCRIPTOR_SET (.*) BINDING (.*)", f.read())
+                    for buffer_name, descriptor_set, binding in buffers:
+                        cmd_ending += ["-b", buffer_name, "-B", binding]
+                cmd_ending.append(shader_to_compile)
+                f.close()
+
+            else:
+                cmd_ending = [shader_tool.path, "--require-vendor-renderer-substring", compiler.renderer,
+                              shader_to_compile]
+            cmd = build_env_from_compiler(compiler) + cmd_ending
+            if verbose:
+                print("Shadertrap command: " + " ".join(cmd))
+            process_return = run(cmd, capture_output=True, text=True, timeout=timeout)
+            if run_type == "add_id":
+                if os.path.isfile("buffer_ids.txt"):
+                    shutil.move("buffer_ids.txt", "ids.txt")
+                    buffer_files = find_buffer_file(os.getcwd())
+                    clean_files(os.getcwd(), buffer_files)
+
+    # Catch timeouts (post-processed shaders should not contain any)
+    except subprocess.TimeoutExpired:
+        return False, True, "timeout"
+    # Detect error at compilation time
+    if (shader_tool.name == "shadertrap" and 'SUCCESS!' not in process_return.stderr) or \
+            (shader_tool.name == "amber" and "1 pass" not in process_return.stdout):
+        message = ""
+        # Output compilation error messages
+        if process_return.stdout != "":
+            print(process_return.stdout)
+            message += process_return.stdout
+        if process_return.stderr != "":
+            print(process_return.stderr)
+            message += process_return.stderr
+        return True, False, message
+
+    return False, False, "no_crash"
+
+
 def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, output_seed="", move_dir="./", verbose=False,
-                        timeout=10, postprocessing=True):
+                        timeout=10, double_run=False, postprocessing=True):
     no_compile_errors = []
     # Verify that the file exists
     if not os.path.isfile(shadername):
@@ -260,11 +334,16 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
     resulting_buffers = []
     # Call postprocessing using java
     shader_to_compile = shadername
+    run_type = "standard"
     if postprocessing:
         cmd = ["mvn", "-f", graphicsfuzz+"pom.xml", "-pl", "glslsmith", "-q", "-e", "exec:java",
-               "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler" ]
+               "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler"]
         args = r'-Dexec.args=--src ' + str(shadername) + r' --dest tmp' + shader_tool.file_extension
+        if double_run:
+            args += r' --id_wrappers'
         cmd += [args]
+        if verbose:
+            print("Reconditioning command: " + " ".join(cmd))
         process_return = run(cmd, capture_output=True, text=True)
         #print(process_return.stderr)
         #print(process_return.stdout)
@@ -275,79 +354,70 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
             return [False for _ in compilers_dict]
         shader_to_compile = "tmp" + shader_tool.file_extension
 
-    # Call the compilation for each available compiler
+        # Call the compilation for a single compiler in dual mode
+        if double_run:
+            # Produce the ids file for the second run
+            compiler_name = next(iter(compilers_dict))
+            compiler = compilers_dict[compiler_name]
+            crash_result, timeout_result, message = single_compile(compiler, shader_to_compile, shader_tool,
+                                                                   timeout, "add_id")
+            run_type = "reduced"
+
+            # Verify that no execution error occurred and fallback if necessary
+            if crash_result or timeout_result:
+                print("Execution error on shader " + shadername + " with " + compiler.name
+                      + " and added ids, falling back on standard run")
+                print(message)
+                run_type = "standard"
+            else:
+                # Post-process in a reduced fashion
+                cmd = ["mvn", "-f", graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e", "exec:java",
+                       "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler"]
+                args = r'-Dexec.args=--src ' + str(shadername) + r' --dest tmp' + str(shader_tool.file_extension) + r' --reduce_wrappers ids.txt'
+                cmd += [args]
+                if verbose:
+                    print("Reconditioning command: " + " ".join(cmd))
+                process_return = run(cmd, capture_output=True, text=True)
+                # print(process_return.stderr)
+                # print(process_return.stdout)
+                if "SUCCESS!" not in process_return.stdout:
+                    print(process_return.stderr)
+                    print(process_return.stdout)
+                    print(shadername + " cannot be parsed with the second run, error")
+                    return [False for _ in compilers_dict]
+        else:
+            run_type = "standard"
+
+    # Call the compilation for each available compiler in single mode or dual mode
     for compiler_name in compilers_dict:
         # Specify the buffers output name (if a seed is given it is added in the name)
         if output_seed != "":
-            file_result = "buffer_"+ compiler_name + "_" + str(output_seed) + ".txt"
+            file_result = "buffer_" + compiler_name + "_" + str(output_seed) + ".txt"
         else:
-            file_result = "buffer_"+ compiler_name + ".txt"
+            file_result = "buffer_" + compiler_name + ".txt"
         # Register the resulting buffer as a result instead of a temporary buffer (ie: buffer_1 etc...)
         resulting_buffers.append(file_result)
 
-        try:
-            compiler = compilers_dict[compiler_name]
-            if compiler.type == "android":
-                run(["adb", "push", shader_to_compile, "/data/local/tmp/test" + shader_tool.file_extension],
-                    capture_output=True, text=True)
-                # The Android ShaderTrap binary is assumed to be present at /data/local/tmp
-                if shader_tool.name == "amber":
-                    # TODO add parsing for buffers with amber
-                    process_return = run(["adb", "shell", "cd /data/local/tmp && ./amber test.amber"])
-                else:
-                    process_return = run(["adb", "shell",
-                                          "cd /data/local/tmp && ./shadertrap --require-vendor-renderer-substring "
-                                          + compiler.renderer + " test.shadertrap"], capture_output=True, text=True,
-                                         timeout=timeout)
-                ls_return = run(["adb", "shell", "ls", "/data/local/tmp/buffer_*"], capture_output=True, text=True)
-                for buffer_file in ls_return.stdout.split():
-                    run(["adb", "pull", buffer_file], capture_output=True, text=True)
-                run(["adb", "shell", "rm", "/data/local/tmp/buffer_*"], capture_output=True, text=True)
-                run(["adb", "shell", "rm", "/data/local/tmp/test" + shader_tool.file_extension], capture_output=True,
-                    text=True)
-            else:
-                # Execute the correct cmd command
-                if shader_tool.name == "amber":
-                    f = open(shader_to_compile)
-                    buffers = re.findall(r"BUFFER (.+) AS storage DESCRIPTOR_SET (.*) BINDING (.*)", f.read())
-                    f.close()
-                    cmd_ending = [shader_tool.path]
-                    for buffer_name, descriptor_set, binding in buffers:
-                        cmd_ending += ["-b",buffer_name,"-B",binding]
-                    cmd_ending.append(shader_to_compile)
-                else:
-                    cmd_ending = [shader_tool.path, "--require-vendor-renderer-substring",compiler.renderer,
-                                  shader_to_compile]
-                cmd = build_env_from_compiler(compiler) + cmd_ending
-                process_return = run(cmd, capture_output=True, text=True, timeout=timeout)
-        # Catch timeouts (post-processed shaders should not contain any)
-        except subprocess.TimeoutExpired:
-            print("Timeout reached on shader " + shadername + " with " + compiler_name)
-            no_compile_errors.append("timeout")
+        compiler = compilers_dict[compiler_name]
+
+        crash_result, timeout_result, message = single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type)
+        no_compile_errors.append(message)
+        if timeout_result:
+            print("Timeout reached on shader " + shadername + " with " + compiler.name)
             # Write timeout as buffer value to permit direct buffer comparison in reduction for example etc...
             file = open(file_result, 'w')
             file.write("timeout")
             # Perform the copy of the file if the final buffer is saved somewhere else
             if move_dir != './':
                 shutil.move(file_result, move_dir)
-                clean_files(os.getcwd(),file_result)
+                clean_files(os.getcwd(), file_result)
             continue
-        # Detect error at compilation time
-        if (shader_tool.name == "shadertrap" and 'SUCCESS!' not in process_return.stderr) or \
-                (shader_tool.name == "amber" and "1 pass" not in process_return.stdout):
+
+        if crash_result:
             if verbose:
                 print("Execution error on shader " + shadername + " with " + compiler.name)
-            message = ""
-            # Output compilation error messages
-            if process_return.stdout != "":
-                print(process_return.stdout)
-                message += process_return.stdout
-            if process_return.stderr != "":
-                print(process_return.stderr)
-                message += process_return.stderr
-            no_compile_errors.append(message)
-        else:
-            no_compile_errors.append("no_crash")
+                print(message)
+
         # Concatenate files to a single output per test
         buffer_files = find_buffer_file(os.getcwd())
         # Exclude combined files from concatenation and removal
@@ -358,4 +428,6 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
             shutil.move(file_result, move_dir)
             buffer_files.append(file_result)
         clean_files(os.getcwd(), buffer_files)
+        if double_run:
+            clean_files(os.getcwd(), ["ids.txt"])
     return no_compile_errors
