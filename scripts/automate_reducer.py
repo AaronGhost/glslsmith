@@ -29,6 +29,8 @@ def main():
                         help="forces the reducer to attempt to reduce shaders which time out")
     parser.add_argument("--instrumentation", dest="instru", action="store_true",
                         help="adds an extra line in the shell script to generate a reduction log file")
+    parser.add_argument('--double-run', dest="double_run", action="store_true",
+                        help="Run the program twice eliminating useless wrappers on the second run")
     ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
     if ns.batch:
         files_to_reduce = os.listdir(exec_dirs.keptshaderdir)
@@ -40,14 +42,14 @@ def main():
                     files_to_reduce.remove(file.split("_")[0]  + shader_tool.file_extension)
 
         batch_reduction(reducer, compilers_dict, exec_dirs, files_to_reduce, shader_tool, ns.ref, ns.timeout,
-                        instrumentation=ns.instru)
+                        double_run=ns.double_run,  instrumentation=ns.instru)
     else:
         run_reduction(reducer, compilers_dict, exec_dirs, ns.test_file, ns.output_file, shader_tool, ns.ref, ns.timeout,
-                      instrumentation=ns.instru)
+                      double_run=ns.double_run, instrumentation=ns.instru)
 
 
-def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool, ref, reduce_timeout, override_prefix="_reduced",
-                    instrumentation=False):
+def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool, ref, reduce_timeout,
+                    double_run=False, override_prefix="_reduced", instrumentation=False):
     for file in files_to_reduce:
         # copy file to exec_dir
         file_radix = file.split(".")[0]
@@ -55,7 +57,7 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool,
         shutil.copy(exec_dirs.keptshaderdir + file, "original_test" + shader_tool.file_extension)
         # run reduction
         run_reduction(reducer, compilers, exec_dirs, "original_test" + shader_tool.file_extension, "test_reduced" + shader_tool.file_extension, shader_tool,
-                      ref, reduce_timeout, log_file=reducer.name + "_" + file_radix + ".log",
+                      ref, reduce_timeout, log_file=reducer.name + "_" + file_radix + ".log", double_run=double_run,
                       instrumentation=instrumentation)
 
         # copy back
@@ -67,7 +69,7 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool,
 
 
 def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader_tool, ref, reduce_timeout, log_file="",
-                  instrumentation=True):
+                  double_run=False, instrumentation=True):
     # Builds the interestingness test
     print("Building the interesting shell script")
     # Builds a temp harness
@@ -77,9 +79,10 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
     instrumentation_filename = log_file
     if instrumentation and instrumentation_filename == "":
         instrumentation_filename = reducer.name + "_" + test_input + ".log"
+
     error_code_str = create_shell_test.build_shell_test(compilers, exec_dirs, shader_tool, "temp" + shader_tool.file_extension,
                                                         reducer.input_file, ref, reducer.interesting_test,
-                                                        instrumentation_filename)
+                                                        double_run=double_run, instrumentation=instrumentation_filename)
     error_code = int(error_code_str[:4])
     # Make sure the interestingness test is executable
     interesting_test_stat = os.stat(reducer.interesting_test)

@@ -44,17 +44,20 @@ def main():
                         help="Compare the combined buffer outputs to a reference file")
     parser.add_argument('--no-cleaning', dest='clean', action="store_false",
                         help="Do not clean buffers and post-processed shaders after execution")
+    parser.add_argument('--double-run', dest="double_run", action="store_true",
+                        help="Run the program twice eliminating useless wrappers on the second run")
     ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
 
-    execute_reduction(compilers_dict, exec_dirs, shader_tool, ns.shader, ns.ref, ns.clean, ns.postprocessing)
+    execute_reduction(compilers_dict, exec_dirs, shader_tool, ns.shader, ns.ref, ns.clean, ns.double_run,
+                      ns.postprocessing)
 
 
-def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref, clean_dir, postprocessing):
+def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref, clean_dir, double_run, postprocessing):
     # Execute the host file with the different drivers
     common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))
     compilers = list(compilers_dict.values())
     results = common.execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, shader_tool, shader_name,
-                                         verbose=True, postprocessing=postprocessing)
+                                         verbose=True, double_run=double_run, postprocessing=postprocessing)
     if clean_dir:
         common.clean_files(os.getcwd(), ["tmp" + shader_tool.file_extension])
     crash_flag = False

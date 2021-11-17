@@ -46,7 +46,7 @@ def main():
                         help="Enforce the reducer if reduction is applied, see --reduce")
     parser.add_argument('--reduce-timeout', dest="timeout", action="store_true",
                         help="Force the reducer to consider reduction of shaders that time out (DISCOURAGED)")
-    parser.add_argument('--reduce-wrappers', dest='double_run', action='store_true',
+    parser.add_argument('--double_run', dest='double_run', action='store_true',
                         help="Run the reconditioning step twice, reducing the number of wrappers on the second run")
     parser.add_argument('--verbose', dest='verbose', action='store_true',
                         help="Provide more logging information about the executed command")
