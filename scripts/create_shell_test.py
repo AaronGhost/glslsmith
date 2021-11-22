@@ -76,7 +76,7 @@ def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shade
         # Call reduction script to check for error code
         # TODO use only restricted compiler set
         if double_run:
-            option = " --double_run"
+            option = " --double-run"
         else:
             option = ""
         shell.write("ERROR_CODE_IN_FILE=$( (python3 ${ROOT}/scripts/reduction_helper.py --config-file ${"
