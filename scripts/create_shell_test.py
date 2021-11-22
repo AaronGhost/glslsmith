@@ -29,18 +29,22 @@ def main():
     parser.add_argument('--no-validation', dest='shadervalidation', action='store_false', help="TODO")
     parser.add_argument('--shell-name', dest='shellname', default='interesting.sh',
                         help="Configure the name of the interestingness test to dump the code to")
+    parser.add_argument('--double_run', dest="double_run", action="store_true",
+                        help="Run the program twice eliminating useless wrappers on the second run")
     parser.add_argument('--ref', type=int, dest="ref", default=-1, help="TODO")
 
     ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
 
-    build_shell_test(compilers_dict, exec_dirs, shader_tool, ns.harness, ns.shader, ns.ref, ns.shellname)
+    build_shell_test(compilers_dict, exec_dirs, shader_tool, ns.harness, ns.shader, ns.ref, ns.shellname,
+                     double_run=ns.double_run)
 
 
-def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shader_name, ref, shell_file,
+def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shader_name, ref, shell_file, double_run=False,
                      instrumentation=""):
     # Collect error code from the reduction process
     try:
-        reduction_helper.execute_reduction(compilers_dict, exec_dirs, shader_tool, harness_name, ref, True, True)
+        reduction_helper.execute_reduction(compilers_dict, exec_dirs, shader_tool, harness_name, ref, True,
+                                           double_run=double_run, postprocessing=True)
     except SystemExit as e:
         error_code = str(e)
         print("Detected error code: " + error_code)
@@ -71,9 +75,13 @@ def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shade
             + harness_name + " \"$SHADER\"\n")
         # Call reduction script to check for error code
         # TODO use only restricted compiler set
+        if double_run:
+            option = " --double-run"
+        else:
+            option = ""
         shell.write("ERROR_CODE_IN_FILE=$( (python3 ${ROOT}/scripts/reduction_helper.py --config-file ${"
                     "ROOT}/scripts/config.xml --shader-name ${ROOT}/" + harness_name + " --host " + shader_tool.name
-                    + " 2>&1 > /dev/null) || true)\n")
+                    + option + " 2>&1 > /dev/null) || true)\n")
         shell.write("echo $ERROR_CODE_IN_FILE\n")
         shell.write("if [ \"$ERROR_CODE_IN_FILE\" == \"$ERROR_CODE\" ]\nthen\n    exit 0\nelse\n    exit 1\nfi\n")
         shell.close()

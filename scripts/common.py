@@ -304,6 +304,8 @@ def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, 
                     shutil.move("buffer_ids.txt", "ids.txt")
                     buffer_files = find_buffer_file(os.getcwd())
                     clean_files(os.getcwd(), buffer_files)
+                else:
+                    open("ids.txt", 'a').close()
 
     # Catch timeouts (post-processed shaders should not contain any)
     except subprocess.TimeoutExpired:
@@ -367,10 +369,10 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
             if crash_result or timeout_result:
                 print("Execution error on shader " + shadername + " with " + compiler.name
                       + " and added ids, falling back on standard run")
-                print(message)
+                # print(message)
                 run_type = "standard"
             else:
-                # Post-process in a reduced fashion
+                # Post-process in without useless wrappers
                 cmd = ["mvn", "-f", graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e", "exec:java",
                        "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler"]
                 args = r'-Dexec.args=--src ' + str(shadername) + r' --dest tmp' + str(shader_tool.file_extension) + r' --reduce_wrappers ids.txt'
@@ -381,8 +383,8 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
                 # print(process_return.stderr)
                 # print(process_return.stdout)
                 if "SUCCESS!" not in process_return.stdout:
-                    print(process_return.stderr)
-                    print(process_return.stdout)
+                    # print(process_return.stderr)
+                    # print(process_return.stdout)
                     print(shadername + " cannot be parsed with the second run, error")
                     return [False for _ in compilers_dict]
         else:
