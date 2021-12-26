@@ -250,15 +250,25 @@ def env_setup(parser):
     return ns, exec_dirs, compilers_dict, reducer, shader_tool
 
 
-def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, verbose = False):
+def find_amber_buffers(shader_to_compile):
+    with open(shader_to_compile) as f:
+        return re.findall(r"BUFFER (.+) AS storage DESCRIPTOR_SET (.*) BINDING (.*)", f.read())
+
+
+def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, verbose=False):
     try:
         if compiler.type == "android":
             run(["adb", "push", shader_to_compile, "/data/local/tmp/test" + shader_tool.file_extension],
                 capture_output=True, text=True)
             # The Android ShaderTrap binary is assumed to be present at /data/local/tmp
             if shader_tool.name == "amber":
-                # TODO add parsing for buffers with amber
-                process_return = run(["adb", "shell", "cd /data/local/tmp && ./amber test.amber"])
+                amber_command = "./amber -d"
+                for buffer_name, descriptor_set, binding in find_amber_buffers(shader_to_compile):
+                    amber_command += " -b " + buffer_name + " -B " + binding
+                amber_command += " test.amber"
+                process_return = run(["adb", "shell", "cd /data/local/tmp && " + amber_command], capture_output=True,
+                                     text=True,
+                                     timeout=timeout)
             else:
                 process_return = run(["adb", "shell",
                                       "cd /data/local/tmp && ./shadertrap --require-vendor-renderer-substring "
@@ -278,19 +288,15 @@ def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, 
             # Execute the correct cmd command
             if shader_tool.name == "amber":
                 # TODO only the last buffer_name is effectively dumped (contain multiple binding) => b token useless
-                f = open(shader_to_compile)
-                cmd_ending = [shader_tool.path]
+                cmd_ending = [shader_tool.path, "-d"]
 
                 if run_type == "add_id":
-                    buffers = re.findall(r"BUFFER buffer_ids AS storage DESCRIPTOR_SET (.*) BINDING (.*)", f.read())
-                    descriptor_set, binding = buffers[0]
+                    buffer, descriptor_set, binding = find_amber_buffers(shader_to_compile)[0]
                     cmd_ending += ["-b", "buffer_ids.txt", "-B", binding]
                 else:
-                    buffers = re.findall(r"BUFFER (.+) AS storage DESCRIPTOR_SET (.*) BINDING (.*)", f.read())
-                    for buffer_name, descriptor_set, binding in buffers:
+                    for buffer_name, descriptor_set, binding in find_amber_buffers(shader_to_compile):
                         cmd_ending += ["-b", buffer_name, "-B", binding]
                 cmd_ending.append(shader_to_compile)
-                f.close()
 
             else:
                 cmd_ending = [shader_tool.path, "--require-vendor-renderer-substring", compiler.renderer,
