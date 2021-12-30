@@ -15,7 +15,6 @@
 
 import os
 import argparse
-import sys
 from subprocess import run
 import common
 
