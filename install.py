@@ -19,6 +19,12 @@ import argparse
 import sys
 
 
+def add_text_element_to_struct(document, current_struct, new_node_name, node_content):
+    new_node = document.createElement(new_node_name)
+    new_node.appendChild(document.createTextNode(node_content))
+    current_struct.appendChild(new_node)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Configure and install the glslsmith scripts")
     parser.add_argument("--configure-only", help="Skips the installation part", dest="configureonly",
@@ -77,12 +83,25 @@ def main():
                     execute_with_popen(["mkdir", dir], current_dir)
             current_dir += dir + "/"
 
-    print("\n[3/5] Configuration of shader embedding language")
-    print("At the moment, the only supported language to embed the shader is shadertrap")
-    input_value = input("Please specify the path of the shadertrap executable: ")
-    while input_value == "":
-        input_value = input("Please specify the path of the shadertrap executable: ")
-    shadertrap_dir = input_value
+    print("\n[3/5] Configuration of shader embedding language(s)")
+    print("At the moment, Shadertrap (preferred) and Amber are supported")
+    shadertrap_dir = ""
+    amber_dir = input_value
+
+    while shadertrap_dir == "" and amber_dir == "":
+        shadertrap_support = input("Do you want to use Shadertrap? [Y/n]")
+        if shadertrap_support != "N" and shadertrap_support != "n":
+            input_value = input("Please specify the path of the Shadertrap executable: ")
+            while input_value == "":
+                input_value = input("Please specify the path of the Shadertrap executable: ")
+            shadertrap_dir = input_value
+
+        amber_support = input("Do you want to use Amber? [Y/n]")
+        amber_dir = ""
+        if amber_support != "N" and shadertrap_support != "n":
+            input_value = input("Please specify the path of the Amber executable: ")
+            while input_value == "":
+                input_value = input("Please specify the path of the Amber executable: ")
 
     print("\n[4/5] Configuration of the tested compilers")
     print("Multiple compilers are necessary to test the buffer outputs associated with a specific shader")
@@ -183,87 +202,65 @@ def main():
     config_document = impl.createDocument(None, "config", None)
     # Dir settings
     dirsettings = config_document.createElement("dirsettings")
-    graphicsfuzz = config_document.createElement("graphicsfuzz")
-    graphicsfuzz.appendChild(config_document.createTextNode(os.getcwd() + '/graphicsfuzz/'))
-    dirsettings.appendChild(graphicsfuzz)
-    execdir = config_document.createElement("execdir")
-    execdir.appendChild(config_document.createTextNode(os.getcwd()))
-    dirsettings.appendChild(execdir)
-    shadertrap = config_document.createElement("shadertrap")
-    shadertrap.appendChild(config_document.createTextNode(shadertrap_dir))
-    dirsettings.appendChild(shadertrap)
-    shaderoutput = config_document.createElement("shaderoutput")
-    shaderoutput.appendChild(config_document.createTextNode(outputshaders))
-    dirsettings.appendChild(shaderoutput)
-    dumpbufferdir = config_document.createElement("dumpbufferdir")
-    dumpbufferdir.appendChild(config_document.createTextNode(dumpbuffer))
-    dirsettings.appendChild(dumpbufferdir)
-    keptbufferdir = config_document.createElement("keptbufferdir")
-    keptbufferdir.appendChild(config_document.createTextNode(keptbuffer))
-    dirsettings.appendChild(keptbufferdir)
-    keptshaderdir = config_document.createElement("keptshaderdir")
-    keptshaderdir.appendChild(config_document.createTextNode(keptshader))
-    dirsettings.appendChild(keptshaderdir)
+    add_text_element_to_struct(config_document, dirsettings, "graphicsfuzz", os.getcwd() + '/graphicsfuzz/')
+    add_text_element_to_struct(config_document, dirsettings, "execdir", os.getcwd())
+    add_text_element_to_struct(config_document, dirsettings, "shaderoutput", outputshaders)
+    add_text_element_to_struct(config_document, dirsettings, "dumpbufferdir", dumpbuffer)
+    add_text_element_to_struct(config_document, dirsettings, "keptbufferdir", keptbuffer)
+    add_text_element_to_struct(config_document, dirsettings, "keptshaderdir", keptshader)
 
     # Compilers settings
     compilers_xml = config_document.createElement("compilers")
     for compiler in compilers:
         compiler_xml = config_document.createElement("compiler")
-        name = config_document.createElement("name")
-        name.appendChild(config_document.createTextNode(compiler[0]))
-        compiler_xml.appendChild(name)
-        renderer = config_document.createElement("renderer")
-        renderer.appendChild(config_document.createTextNode(compiler[1]))
-        compiler_xml.appendChild(renderer)
-        type = config_document.createElement("type")
-        type.appendChild(config_document.createTextNode(compiler[2]))
-        compiler_xml.appendChild(type)
-        ldpath = config_document.createElement("LD_LIBRARY_PATH")
-        ldpath.appendChild(config_document.createTextNode(compiler[3]))
-        compiler_xml.appendChild(ldpath)
-        vkfilename = config_document.createElement("VK_ICD_FILENAMES")
-        vkfilename.appendChild(config_document.createTextNode(compiler[4]))
-        compiler_xml.appendChild(vkfilename)
+        add_text_element_to_struct(config_document, compiler_xml, "name", compiler[0])
+        add_text_element_to_struct(config_document, compiler_xml, "renderer", compiler[1])
+        add_text_element_to_struct(config_document, compiler_xml, "type", compiler[2])
+        add_text_element_to_struct(config_document, compiler_xml, "LD_LIBRARY_PATH", compiler[3])
+        add_text_element_to_struct(config_document, compiler_xml, "VK_ICD_FILENAMES", compiler[4])
         otherenvs = config_document.createElement("otherenvs")
         if compiler[5]:
-            length = config_document.createElement("length")
-            length.appendChild(config_document.createTextNode(len(compiler[5])))
-            otherenvs.appendChild(length)
+            add_text_element_to_struct(config_document, otherenvs, "length", len(compiler[5]))
             i = 0
             for otherenv in compiler[5]:
-                otherenv_xml = config_document.createElement("env_" + str(i))
-                otherenv_xml.appendChild(config_document.createTextNode(otherenv))
-                otherenvs.appendChild(otherenv_xml)
+                add_text_element_to_struct(config_document, otherenvs, "env_" + str(i), otherenv)
                 i += 1
         else:
             otherenvs.appendChild(config_document.createTextNode(" "))
         compiler_xml.appendChild(otherenvs)
         compilers_xml.appendChild(compiler_xml)
 
+    # Shader tools settings (amber, shadertrap)
+    shadertools_xml = config_document.createEleement("shadertools")
+    if shadertrap_dir != "":
+        shadertool_xml = config_document.createElement("shadertool")
+        add_text_element_to_struct(config_document, shadertool_xml, "name", "shadertrap")
+        add_text_element_to_struct(config_document, shadertool_xml, "path", shadertrap_dir)
+        add_text_element_to_struct(config_document, shadertool_xml, "extension", ".shadertrap")
+        shadertools_xml.appendChild(shadertool_xml)
+
+    if amber_dir != "":
+        shadertool_xml = config_document.createElement("shadertool")
+        add_text_element_to_struct(config_document, shadertool_xml, "name", "amber")
+        add_text_element_to_struct(config_document, shadertool_xml, "path", amber_dir)
+        add_text_element_to_struct(config_document, shadertool_xml, "extension", ".amber")
+        shadertools_xml.appendChild(shadertool_xml)
+
     # Reducers settings
     reducers_xml = config_document.createElement("reducers")
     for reducer in reducers:
         reducer_xml = config_document.createElement("reducer")
-        name = config_document.createElement("name")
-        name.appendChild(config_document.createTextNode(reducer[0]))
-        command = config_document.createElement("command")
-        command.appendChild(config_document.createTextNode(reducer[1]))
-        interesting = config_document.createElement("interesting")
-        interesting.appendChild(config_document.createTextNode(reducer[2]))
-        input_file = config_document.createElement("input_file")
-        input_file.appendChild(config_document.createTextNode(reducer[3]))
-        output_file = config_document.createElement("output_file")
-        output_file.appendChild(config_document.createTextNode(reducer[4]))
+        add_text_element_to_struct(config_document, reducer_xml, "name", reducer[0])
+        add_text_element_to_struct(config_document, reducer_xml, "command", reducer[1])
+        add_text_element_to_struct(config_document, reducer_xml, "interesting", reducer[2])
+        add_text_element_to_struct(config_document, reducer_xml, "input_file", reducer[3])
+        add_text_element_to_struct(config_document, reducer_xml, "output_file", reducer[4])
         extrafiles = config_document.createElement("extra_files")
         if reducer[5]:
-            length = config_document.createElement("length")
-            length.appendChild(config_document.createTextNode(str(len(reducer[5]))))
-            extrafiles.appendChild(length)
+            add_text_element_to_struct(config_document, extrafiles, "length", str(len(reducer[5])))
             i = 0
             for extra_file in reducer[5]:
-                extra_file_xml = config_document.createElement("file_" + str(i))
-                extra_file_xml.appendChild(config_document.createTextNode(extra_file))
-                extrafiles.appendChild(extra_file_xml)
+                add_text_element_to_struct(config_document, extrafiles, "file_" + str(i), extra_file)
                 i += 1
         else:
             extrafiles.appendChild(config_document.createTextNode(" "))
