@@ -19,6 +19,7 @@ import shutil
 import argparse
 import common
 import automate_reducer
+import splitter_merger
 
 
 def main():
@@ -50,11 +51,19 @@ def main():
                         help="Run the reconditioning step twice, reducing the number of wrappers on the second run")
     parser.add_argument('--verbose', dest='verbose', action='store_true',
                         help="Provide more logging information about the executed command")
+    parser.add_argument('--glsl-only', dest="glsl_only", action="store_true",
+                        help="Generate the files, recondition them on the go and split out the glsl shader out of the harness")
 
     ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
 
     # temp value for compiler validation (not revalidating on loops)
     validate_compilers = ns.validatecompilers
+
+    if ns.glsl_only:
+        ns.generateonly = True
+        ns.validatecompilers = False
+        ns.reduce = False
+        ns.double_run = False
 
     batch_nb = 1
     # go to generation location
@@ -89,6 +98,28 @@ def main():
 
                 print("Generation of " + str(ns.shadercount) + " shaders done")
                 if ns.generateonly:
+                    if ns.glsl_only:
+                        for i in range(ns.shadercount):
+                            # Give the files their seed name
+                            definitive_path = exec_dirs.shaderoutput + "test_" + str(seed + i) + shader_tool.file_extension
+                            reconditioned_path = exec_dirs.shaderoutput + "test_" + str(seed + i) + "_re" + shader_tool.file_extension
+                            glsl_path = exec_dirs.shaderoutput + "test_" + str(seed + i) + "_re" + ".comp"
+                            shutil.move(exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
+                                        exec_dirs.shaderoutput + "test_" + str(seed + i) + shader_tool.file_extension)
+                            # Post process the shader
+                            cmd = ["mvn", "-f", exec_dirs.graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e",
+                                   "exec:java",
+                                   "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler"]
+                            args = r'-Dexec.args=--src ' + str(definitive_path) + r' --dest ' + reconditioned_path
+                            cmd += [args]
+                            process_return = run(cmd, capture_output=True, text=True)
+                            if "SUCCESS!" not in process_return.stdout:
+                                print(process_return.stderr)
+                                print(process_return.stdout)
+                                print(ns.shader + " cannot be parsed for post-processing")
+                                exit(1)
+                            splitter_merger.split(shader_tool, reconditioned_path, glsl_path)
+                        print("Shaders successfully reconditioned and outputed as glsl")
                     return
 
             # execute actions on generated shaders
