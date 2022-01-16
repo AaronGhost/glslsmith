@@ -126,12 +126,12 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
         common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
 
     # Cleans the current repository
-    #common.clean_files(os.getcwd(),
-    #                   ["temp" + shader_tool.file_extension, reducer.input_file, reducer.output_files, reducer.interesting_test])
+    common.clean_files(os.getcwd(),
+                       ["temp" + shader_tool.file_extension, reducer.input_file, reducer.output_files, reducer.interesting_test])
     residues = common.find_test_file(os.getcwd())
     if test_output in residues:
         residues.remove(test_output)
-    #common.clean_files(os.getcwd(), residues)
+    common.clean_files(os.getcwd(), residues)
 
 
 if __name__ == '__main__':

@@ -59,20 +59,21 @@ def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shade
         # Choose the shader name (glsl-reduce support)
         shell.write("if [ $# -eq 0 ]\n")
         shell.write("then\n")
-        shell.write("SHADER=\"" + shader_name + "\"\n")
+        shell.write("SHADER=$(pwd)\"/" + shader_name + "\"\n")
         shell.write("else\n")
-        shell.write("SHADER_ROOT=$(echo $1 | sed -e 's/\.[^.]*$//')\n")
+        shell.write("SHADER_ROOT=$(echo $1 | sed -e 's/\\.[^.]*$//')\n")
         shell.write("SHADER=\"${SHADER_ROOT}.comp\"\n")
         shell.write("fi\n")
         if instrumentation != "":
             shell.write("python3 ${ROOT}/scripts/benchmark_helper.py --log ${ROOT}/" + instrumentation + "\n")
+        shell.write("echo $(pwd)\n")
         shell.write("echo \"$SHADER\"\n")
         # Check that main remains
         shell.write("cat \"$SHADER\" | grep \"main\"\n")
         # Call merger
         shell.write(
             "python3 ${ROOT}/scripts/splitter_merger.py --config-file ${ROOT}/scripts/config.xml --host " + shader_tool.name + " --merge " + "${ROOT}/"
-            + harness_name + " \"$SHADER\"\n")
+            + harness_name + "$SHADER\"\n")
         # Call reduction script to check for error code
         # TODO use only restricted compiler set
         if double_run:

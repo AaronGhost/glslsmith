@@ -77,10 +77,16 @@ def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref, 
             all_crashed = False
         i += 1
     if all_crashed:
+        if clean_dir:
+            common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))
         sys.exit(str(1000))
     elif crash_flag:
+        if clean_dir:
+            common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))
         sys.exit(str(1000 + cp_codes_crash))
     elif timeout_flag:
+        if clean_dir:
+            common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))
         sys.exit(str(2000 + cp_codes_timeout))
     print("No crash")
     if ref != -1:
@@ -126,9 +132,9 @@ def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref, 
             common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))
         sys.exit(str(4000) + " " + str(comparison_result))
     else:
-        print("No differences between implementations")
         if clean_dir:
             common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))
+        print("No differences between implementations")
         sys.stderr.write("0000")
         sys.exit(0)
 
