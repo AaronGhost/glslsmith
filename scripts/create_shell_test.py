@@ -14,6 +14,8 @@
 import argparse
 import os
 
+from scripts import common, reduction_helper
+
 
 def main():
     parser = argparse.ArgumentParser(description="Build an interestingness test shell script for the given shader")

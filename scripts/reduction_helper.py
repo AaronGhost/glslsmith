@@ -27,6 +27,7 @@ import sys
 # Angle vs other Compilation: 3099
 # Other differences across compilation: 4000
 # Difference across specific reference and current compilation (dead code removal): 5000 + compiler code
+from scripts import common
 
 
 def main():

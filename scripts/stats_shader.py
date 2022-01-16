@@ -16,6 +16,9 @@ import argparse
 import re
 from subprocess import run
 
+from common import env_setup, clean_files
+from splitter_merger import split
+
 
 def find_shader_main_body(glsl_text):
     glsl_reg = re.compile(r"void main\(\)\n{(.*)}", re.DOTALL)
@@ -50,7 +53,7 @@ def main():
     parser = argparse.ArgumentParser(description="Provides statistics about a selected shader")
     parser.add_argument('--shader-name', dest='shader', default='test.shadertrap',
                         help="Specify the shader name to give stats on (by default: test.shadertrap)")
-    ns, exec_dirs, _, _, shader_tool = common.env_setup(parser)
+    ns, exec_dirs, _, _, shader_tool = env_setup(parser)
 
     harness_file = r'tmp' + shader_tool.file_extension
     shader_file = r'tmp.glsl'
@@ -68,13 +71,13 @@ def main():
         exit(1)
 
     # Split the shader from the embedding code
-    splitter_merger.split(shader_tool, harness_file, shader_file)
+    split(shader_tool, harness_file, shader_file)
 
     # Report the number of lines and bytes in the current code
     print_file_report(shader_file)
 
     # Delete the temp files and the temp shader
-    common.clean_files("./", [harness_file, shader_file])
+    clean_files("./", [harness_file, shader_file])
     exit(0)
 
 

@@ -1,10 +1,13 @@
 import pytest
 
-from scripts.stats_shader import find_shader_main_body, report_wrapper_call
+from scripts.stats_shader import find_shader_main_body, report_wrapper_call, print_file_report
 from testhelper import load_file
 
 
 class TestStatsShader:
+    example1_text = ""
+    example2_text = ""
+
     @pytest.mark.parametrize("origin_file, expected",
                              [("example1.glsl", "result1.txt"),
                               ("example2.glsl", "result2.txt")])
@@ -15,3 +18,11 @@ class TestStatsShader:
         assert report_wrapper_call("void main()\n{\n}\n") == 0
         assert report_wrapper_call(load_file("stats_shader/result1.txt")) == 2
         assert report_wrapper_call(load_file("stats_shader/result2.txt")) == 7
+
+    @pytest.mark.parametrize("origin_file, expected",
+                             [("example1.glsl", example1_text),
+                              ("example2.glsl", example2_text)])
+    def test_print_file_report(self, capsys, origin_file, expected):
+        print_file_report("stats_shader/" + origin_file)
+        outputs = capsys.readouterr()
+        assert outputs.out == expected

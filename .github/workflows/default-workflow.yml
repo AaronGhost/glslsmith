@@ -19,4 +19,4 @@ jobs:
           pip install pytest
       - name: Tests with pytest
         run: |
-         python -m pytest --ignore graphicsfuzz
+         cd scripts && python -m pytest --ignore graphicsfuzz
