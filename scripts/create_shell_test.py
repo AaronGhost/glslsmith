@@ -13,9 +13,6 @@
 # limitations under the License.
 import argparse
 import os
-import sys
-import common
-import reduction_helper
 
 
 def main():

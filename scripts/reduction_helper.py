@@ -17,8 +17,6 @@ import argparse
 import os
 import sys
 
-import common
-
 
 # Internal error code on exit have been distributed as follow
 # Compiler codes are defined by the order of the compiler in the config file and only the first to fail is reported

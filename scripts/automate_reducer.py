@@ -8,10 +8,6 @@ import sys
 import time
 from datetime import timedelta
 
-import create_shell_test
-import common
-import splitter_merger
-
 
 def main():
     parser = argparse.ArgumentParser(description="Automates the reduction of a shadertrap file")

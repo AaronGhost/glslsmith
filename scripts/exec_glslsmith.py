@@ -17,9 +17,6 @@ from subprocess import run
 import os
 import shutil
 import argparse
-import common
-import automate_reducer
-import splitter_merger
 
 
 def main():

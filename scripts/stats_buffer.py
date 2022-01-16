@@ -16,7 +16,6 @@
 import os
 import argparse
 from subprocess import run
-import common
 
 
 def report_line_nb(seed, dir):

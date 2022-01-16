@@ -15,8 +15,6 @@ import argparse
 import re
 import sys
 
-import common
-
 
 def get_glslcode_from_shadertrap(shadertrap_text):
     shadertrap_reg = re.compile(r".*DECLARE_SHADER shader KIND COMPUTE\n(.*)END\n.*", re.DOTALL)

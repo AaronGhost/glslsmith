@@ -1,2 +1,3 @@
 glslsmithoutput/
 .idea/
+*__pycache__/

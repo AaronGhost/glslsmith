@@ -13,22 +13,37 @@
 # limitations under the License.
 
 import argparse
-import os
 import re
 from subprocess import run
 
-import common
-import splitter_merger
-
 
 def find_shader_main_body(glsl_text):
-    amber_reg = re.compile(r"void main\(\)\n{(.*)}\n", re.DOTALL)
-    match_object = amber_reg.search(glsl_text)
-    return match_object.group(1)
+    glsl_reg = re.compile(r"void main\(\)\n{(.*)}", re.DOTALL)
+    match_object = glsl_reg.search(glsl_text)
+    return match_object.group(0)
 
 
 def report_wrapper_call(main_text):
     return len(re.findall("SAFE", main_text))
+
+
+def print_file_report(shader_file):
+    with open(shader_file, "r") as f:
+        line_count = 1
+        bytes_count = 0
+        for line in f:
+            if line != "\n":
+                line_count += 1
+                bytes_count += len(line)
+    print("Lines: " + str(line_count))
+
+    # Report the number of bytes in the current code
+    print("Bytes: " + str(bytes_count))
+
+    # Report the number of wrapper calls in the current code
+    with open(shader_file, "r") as g:
+        wrapper_count = report_wrapper_call(find_shader_main_body(g.read()))
+    print("Wrapper calls:" + str(wrapper_count))
 
 
 def main():
@@ -56,22 +71,7 @@ def main():
     splitter_merger.split(shader_tool, harness_file, shader_file)
 
     # Report the number of lines and bytes in the current code
-    with open(shader_file, "r") as f:
-        line_count = 1
-        bytes_count = 0
-        for line in f:
-            if line != "\n":
-                line_count += 1
-                bytes_count += len(line)
-    print("Lines: " + str(line_count))
-
-    # Report the number of bytes in the current code
-    print("Bytes: " + str(bytes_count))
-
-    # Report the number of wrapper calls in the current code
-    with open(shader_file, "r") as g:
-        wrapper_count = report_wrapper_call(find_shader_main_body(g.read()))
-    print("Wrapper calls:" + str(wrapper_count))
+    print_file_report(shader_file)
 
     # Delete the temp files and the temp shader
     common.clean_files("./", [harness_file, shader_file])
