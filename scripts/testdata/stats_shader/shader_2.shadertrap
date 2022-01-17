@@ -1,0 +1,35 @@
+GLES 3.1
+CREATE_BUFFER buffer_0 SIZE_BYTES 60 INIT_VALUES uint 48 0 31 2868271946 2 2346076395 3980305380 39 int -2078443651 uint 20 71 3583805990 3963525986 2127973088 3965981702
+BIND_SHADER_STORAGE_BUFFER BUFFER buffer_0 BINDING 0
+
+CREATE_BUFFER buffer_1 SIZE_BYTES 8 INIT_VALUES uint 3921876768 int -2147483648
+BIND_SHADER_STORAGE_BUFFER BUFFER buffer_1 BINDING 1
+
+CREATE_BUFFER buffer_2 SIZE_BYTES 8 INIT_VALUES uint 421525338 uint 4210826860
+BIND_SHADER_STORAGE_BUFFER BUFFER buffer_2 BINDING 2
+
+CREATE_BUFFER buffer_3 SIZE_BYTES 36 INIT_VALUES uint 4294967295 315321675 4034377328 41 894148518 4059275696 4125508326 4294967295 1144152766
+BIND_SHADER_STORAGE_BUFFER BUFFER buffer_3 BINDING 3
+
+DECLARE_SHADER shader KIND COMPUTE
+#version 310 es
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(std430, binding = 1) buffer buffer_1 {
+ readonly uint ext_3;
+ coherent int ext_4;
+};
+layout(std430, binding = 3) buffer buffer_3 {
+ writeonly uint ext_7[9];
+};
+void main()
+{
+ const ivec4 var_0[2] = ivec4[2](ivec4(1), ivec4(1));
+ (ext_7[((((var_0[(var_0[ext_4]).b]).ttss.gb.yy[1] - ext_4) - (- var_0[var_0[var_0[ext_4].brg[1]].z].rgga.zx.yxx[0])) - (- ext_4 / - 2018396466))]) = 1u;
+}
+END
+
+COMPILE_SHADER shader_compiled SHADER shader
+CREATE_PROGRAM compute_prog SHADERS shader_compiled
+RUN_COMPUTE PROGRAM compute_prog NUM_GROUPS 1 1 1
+DUMP_BUFFER_TEXT BUFFER buffer_3 FILE "buffer_3.txt" FORMAT "buffer_3 " uint 9

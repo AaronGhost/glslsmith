@@ -14,7 +14,7 @@
 import argparse
 import os
 
-from scripts import common, reduction_helper
+import common, reduction_helper
 
 
 def main():

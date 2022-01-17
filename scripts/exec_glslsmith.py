@@ -18,7 +18,7 @@ import os
 import shutil
 import argparse
 
-from scripts import common, splitter_merger, automate_reducer
+import common, splitter_merger, automate_reducer
 
 
 def main():

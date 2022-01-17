@@ -15,7 +15,7 @@ import argparse
 import re
 import sys
 
-from scripts import common
+import common
 
 
 def get_glslcode_from_shadertrap(shadertrap_text):

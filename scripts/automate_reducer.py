@@ -8,7 +8,7 @@ import sys
 import time
 from datetime import timedelta
 
-from scripts import common, create_shell_test, splitter_merger
+import common, create_shell_test, splitter_merger
 
 
 def main():

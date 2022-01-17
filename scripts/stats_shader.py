@@ -46,28 +46,21 @@ def print_file_report(shader_file):
     # Report the number of wrapper calls in the current code
     with open(shader_file, "r") as g:
         wrapper_count = report_wrapper_call(find_shader_main_body(g.read()))
-    print("Wrapper calls:" + str(wrapper_count))
+    print("Wrapper calls: " + str(wrapper_count))
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Provides statistics about a selected shader")
-    parser.add_argument('--shader-name', dest='shader', default='test.shadertrap',
-                        help="Specify the shader name to give stats on (by default: test.shadertrap)")
-    ns, exec_dirs, _, _, shader_tool = env_setup(parser)
-
-    harness_file = r'tmp' + shader_tool.file_extension
+def stats_shader(graphicsfuzz, shader_tool, shader, harness_file):
     shader_file = r'tmp.glsl'
-
     # Post process the shader
-    cmd = ["mvn", "-f", exec_dirs.graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e", "exec:java",
+    cmd = ["mvn", "-f", graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e", "exec:java",
            "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler"]
-    args = r'-Dexec.args=--src ' + str(ns.shader) + r' --dest ' + harness_file
+    args = r'-Dexec.args=--src ' + str(shader) + r' --dest ' + harness_file
     cmd += [args]
     process_return = run(cmd, capture_output=True, text=True)
     if "SUCCESS!" not in process_return.stdout:
         print(process_return.stderr)
         print(process_return.stdout)
-        print(ns.shader + " cannot be parsed for post-processing")
+        print(shader + " cannot be parsed for post-processing")
         exit(1)
 
     # Split the shader from the embedding code
@@ -78,7 +71,16 @@ def main():
 
     # Delete the temp files and the temp shader
     clean_files("./", [harness_file, shader_file])
-    exit(0)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Provides statistics about a selected shader")
+    parser.add_argument('--shader-name', dest='shader', default='test.shadertrap',
+                        help="Specify the shader name to give stats on (by default: test.shadertrap)")
+    ns, exec_dirs, _, _, shader_tool = env_setup(parser)
+
+    harness_file = r'tmp' + shader_tool.file_extension
+    stats_shader(exec_dirs.graphicsfuzz, ns.shader_tool, ns.shader, harness_file)
 
 
 if __name__ == "__main__":
