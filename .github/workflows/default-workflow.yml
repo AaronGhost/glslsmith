@@ -42,8 +42,14 @@ jobs:
       # llvmpipe
       - name: Install llvmpipe
         run:
-          mkdir ~/llvmpipe && cd llvmpipe && ../.github/workflows/setup_llvmpipe.sh
+          mkdir ~/llvmpipe && cd ~/llvmpipe && ../.github/workflows/setup_llvmpipe.sh
 
+      # Shadertrap
+      - name: Install Shadertrap
+        run: |
+          curl -fsSL -o shadertrap.zip https://github.com/google/gfbuild-shadertrap/releases/download/github%2Fgoogle%2Fgfbuild-shadertrap%2Fb4e8470b3d69ef063b318248ae47e25e3081199c/gfbuild-shadertrap-b4e8470b3d69ef063b318248ae47e25e3081199c-Linux_x64_Release.zip && sudo apt-get install -y unzip && unzip shadertrap.zip
+
+      # Tests 
       - name: Tests with pytest
         run: |
          cd scripts && python -m pytest --ignore graphicsfuzz
