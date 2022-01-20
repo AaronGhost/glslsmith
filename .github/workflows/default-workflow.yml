@@ -6,12 +6,14 @@ jobs:
   Check-glslsmith-scripts:
 
     runs-on: ubuntu-latest
-
+    
     steps:
+      # Setting up the repository
       - uses: actions/checkout@v2
         with:
           submodules: 'recursive'
       
+      # Python code execution
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -22,6 +24,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest
 
+      # Java dependencies
       - name: Set up GlslangValidator
         run: sudo apt-get install -y glslang-tools
       
@@ -35,6 +38,12 @@ jobs:
       - name: Build GraphicsFuzz
         run: cd graphicsfuzz && mvn -Dmaven.test.skip=true install
       
+
+      # llvmpipe
+      - name: Install llvmpipe
+        run:
+          mkdir ~/llvmpipe && cd llvmpipe && ../.github/workflows/setup_llvmpipe.sh
+
       - name: Tests with pytest
         run: |
          cd scripts && python -m pytest --ignore graphicsfuzz
