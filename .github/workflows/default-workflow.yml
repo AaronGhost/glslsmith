@@ -42,7 +42,7 @@ jobs:
       # llvmpipe
       - name: Install llvmpipe
         run:
-          mkdir ~/llvmpipe && cd ~/llvmpipe && ../.github/workflows/setup_llvmpipe.sh
+          mkdir ~/llvmpipe && cd ~/llvmpipe && $GITHUB_WORKSPACE/.github/workflows/setup_llvmpipe.sh
 
       # Shadertrap
       - name: Install Shadertrap
