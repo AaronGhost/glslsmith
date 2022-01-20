@@ -3,7 +3,7 @@ name: GLSLsmith tests in isolation
 on: [push]
 
 jobs:
-  build-dependencies:
+  Check-glslsmith-scripts:
 
     runs-on: ubuntu-latest
 
@@ -25,7 +25,7 @@ jobs:
       - name: Set up GlslangValidator
         run: sudo apt-get install -y glslang-tools
       
-      - name: Set up GraphicsFuzz
+      - name: Set up GraphicsFuzz with cache
         uses: actions/setup-java@v2
         with:
           distribution: 'temurin'
@@ -33,7 +33,7 @@ jobs:
           cache: 'maven'
       
       - name: Build GraphicsFuzz
-        run: cd graphicsfuzz && mvn install
+        run: cd graphicsfuzz && mvn -Dmaven.test.skip=true install
       
       - name: Tests with pytest
         run: |
