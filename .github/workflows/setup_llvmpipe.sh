@@ -12,11 +12,12 @@ curl -fsSL -o mesa-src.tar.xf "https://archive.mesa3d.org/${MESA_VERSION}.tar.xz
 tar xf mesa-src.tar.xf
 
 # Install mesa
+cd ${MESA_VERSION}
 mkdir build
 mkdir install
 cd build
 echo "Meson"
-meson -D prefix="${HOME}/llvmpipe/install" -D dri-drivers-path=${HOME}/llvmpipe/install -D egl=enabled -D gles1=enabled -D gles2=enabled -D dri-drivers=auto -D vulkan-drivers="" -D gallium-drivers=swrast -D glx=dri
+meson -D prefix="${HOME}/${MESA_VERSION}/install" -D dri-drivers-path=${HOME}/llvmpipe/install -D egl=enabled -D gles1=enabled -D gles2=enabled -D dri-drivers=auto -D vulkan-drivers="" -D gallium-drivers=swrast -D glx=dri
 echo "ninja"
 ninja
 ninja install
