@@ -1,13 +1,5 @@
 MESA_VERSION="mesa-21.1.7"
 
-# Install llvmpipe dependencies
-sudo sed -i '/deb-src/s/^# //' /etc/apt/sources.list
-sudo apt-get update
-sudo apt-get install -y libegl1-mesa-dev
-sudo apt-get build-dep -y mesa
-pip install Mako
-# sudo apt-get install -y meson ninja-build libdrm-dev libwayland-dev wayland-protocols libwayland-egl-backend-dev libxcb-xfixes0-dev
-
 # Download mesa
 curl -fsSL -o mesa-src.tar.xf "https://archive.mesa3d.org/${MESA_VERSION}.tar.xz"
 tar xf mesa-src.tar.xf
