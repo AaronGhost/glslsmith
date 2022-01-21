@@ -4,8 +4,7 @@ MESA_VERSION="mesa-21.1.7"
 sudo apt-get install -y libegl1-mesa-dev
 sudo apt-get build-dep -y mesa
 pip install Mako
-sudo apt-get install -y ninja-build
-sudo apt-get install -y meson
+sudo apt-get install -y meson inja-build libdrm-dev
 
 # Download mesa
 curl -fsSL -o mesa-src.tar.xf "https://archive.mesa3d.org/${MESA_VERSION}.tar.xz"
