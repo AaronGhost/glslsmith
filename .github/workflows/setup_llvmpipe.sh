@@ -5,7 +5,7 @@ sudo apt-get update
 sudo apt-get install -y libegl1-mesa-dev
 sudo apt-get build-dep -y mesa
 pip install Mako
-sudo apt-get install -y meson ninja-build libdrm-dev libwayland-dev wayland-protocols
+sudo apt-get install -y meson ninja-build libdrm-dev libwayland-dev wayland-protocols libwayland-egl-backend-dev
 
 # Download mesa
 curl -fsSL -o mesa-src.tar.xf "https://archive.mesa3d.org/${MESA_VERSION}.tar.xz"
