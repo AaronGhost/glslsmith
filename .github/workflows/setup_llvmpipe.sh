@@ -15,6 +15,8 @@ tar xf mesa-src.tar.xf
 mkdir build
 mkdir install
 cd build
+echo "Meson"
 meson -D prefix="${HOME}/llvmpipe/install" -D dri-drivers-path=${HOME}/llvmpipe/install -D egl=enabled -D gles1=enabled -D gles2=enabled -D dri-drivers=auto -D vulkan-drivers="" -D gallium-drivers=swrast -D glx=dri
+echo "ninja"
 ninja
 ninja install
