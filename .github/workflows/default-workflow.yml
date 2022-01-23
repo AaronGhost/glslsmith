@@ -68,7 +68,7 @@ jobs:
 
       - name: Copy Shadertrap dependencies
         run:
-          cp ./lib/libEGL.so ./lib/libEGL.so.1
+          cp ~/angle/lib/libEGL.so ~/angle/lib/libEGL.so.1
           
       # Shadertrap
       - name: Install Shadertrap
