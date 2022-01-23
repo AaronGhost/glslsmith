@@ -1,4 +1,4 @@
-name: GLSLsmith tests in isolation
+name: GLSLsmith tests
 
 on: [push]
 
@@ -63,8 +63,8 @@ jobs:
 
       # Swiftshader
       - name: Install Swiftshader
-        run:
-          mkdir ~/angle && curl -fsSL angle.zip https://github.com/google/gfbuild-angle/releases/download/github%2Fgoogle%2Fgfbuild-angle%2F96ab6566490495f472cd239997701b201c7a48ac/gfbuild-angle-96ab6566490495f472cd239997701b201c7a48ac-Linux_x64_Debug.zip && unzip angle.zip
+        run: |
+          mkdir ~/angle && cd ~/angle && curl -fsSL -o angle.zip https://github.com/google/gfbuild-angle/releases/download/github%2Fgoogle%2Fgfbuild-angle%2F96ab6566490495f472cd239997701b201c7a48ac/gfbuild-angle-96ab6566490495f472cd239997701b201c7a48ac-Linux_x64_Debug.zip && unzip angle.zip
 
       - name: Copy Shadertrap dependencies
         run:
@@ -73,7 +73,7 @@ jobs:
       # Shadertrap
       - name: Install Shadertrap
         run: |
-          curl -fsSL -o shadertrap.zip https://github.com/google/gfbuild-shadertrap/releases/download/github%2Fgoogle%2Fgfbuild-shadertrap%2Fb4e8470b3d69ef063b318248ae47e25e3081199c/gfbuild-shadertrap-b4e8470b3d69ef063b318248ae47e25e3081199c-Linux_x64_Release.zip && unzip shadertrap.zip
+          mkdir ~/swiftshader && cd ~/swiftshader && curl -fsSL -o shadertrap.zip https://github.com/google/gfbuild-shadertrap/releases/download/github%2Fgoogle%2Fgfbuild-shadertrap%2Fb4e8470b3d69ef063b318248ae47e25e3081199c/gfbuild-shadertrap-b4e8470b3d69ef063b318248ae47e25e3081199c-Linux_x64_Release.zip && unzip shadertrap.zip
 
       # Tests 
       - name: Tests with pytest
