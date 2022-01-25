@@ -30,6 +30,7 @@ class TestStatsShader:
         outputs = capsys.readouterr()
         assert outputs.out == expected
 
+    @pytest.mark.skip(reason="Deactivate for github cache refresh")
     @pytest.mark.parametrize("origin_file, output_text",
                              [("shader_1.shadertrap", example1_text), ("shader_2.shadertrap", example2_text)])
     def test_stats_shader(self, capsys, tmpdir, origin_file, output_text, conf):
