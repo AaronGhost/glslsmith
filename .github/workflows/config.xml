@@ -1,8 +1,8 @@
 <?xml version="1.0" ?>
 <config>
 	<dirsettings>
-		<graphicsfuzz>/home/runner/work/glslsmith/graphicsfuzz/graphicsfuzz/target/graphicsfuzz/python/drivers/</graphicsfuzz>
-		<execdir>/home/runner/work/glslsmith/</execdir>
+		<graphicsfuzz>/home/runner/work/glslsmith/glslsmith/graphicsfuzz/graphicsfuzz/target/graphicsfuzz/python/drivers/</graphicsfuzz>
+		<execdir>/home/runner/work/glslsmith/glslsmith/</execdir>
 		<shaderoutput>./glslsmithoutput/shaders/</shaderoutput>
 		<dumpbufferdir>./glslsmithoutput/buffers/</dumpbufferdir>
 		<keptbufferdir>./glslsmithoutput/keptbuffers/</keptbufferdir>
@@ -36,7 +36,7 @@
 	<reducers>
 		<reducer>
 			<name>glsl-reduce</name>
-			<command>~/graphicsfuzz/graphicsfuzz/target/graphicsfuzz/python/drivers/glsl-reduce /home/runner/work/glslsmith/test.json /home/runner/work/glslsmith/interesting.sh --output=/home/runner/work/glslsmith/ --no-ub-guards"</command>
+			<command>/home/runner/work/glslsmith/glslsmith/graphicsfuzz/graphicsfuzz/target/graphicsfuzz/python/drivers/glsl-reduce /home/runner/work/glslsmith/glslsmith/test.json /home/runner/work/glslsmith/glslsmith/interesting.sh --output=/home/runner/work/glslsmith/glslsmith/ --no-ub-guards"</command>
 			<interesting>interesting.sh</interesting>
 			<input_file>test.comp</input_file>
 			<output_file>test_reduced_final.comp</output_file>
