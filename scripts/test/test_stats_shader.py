@@ -3,8 +3,8 @@ import shutil
 
 import pytest
 
-from scripts.stats_shader import find_shader_main_body, report_wrapper_call, print_file_report, main
-from testhelper import load_file
+from scripts.stats_shader import find_shader_main_body, report_wrapper_call, print_file_report, stats_shader
+from scripts.test.testhelper import load_file
 
 
 class TestStatsShader:
@@ -30,10 +30,14 @@ class TestStatsShader:
         outputs = capsys.readouterr()
         assert outputs.out == expected
 
-    @pytest.mark.parametrize("origin_file",[("shader_1.shadertrap"), ("shader_2.shadertrap")])
-    def test_stats_shader(self, capsys, tmpdir, origin_file):
+    @pytest.mark.parametrize("origin_file, output_text",
+                             [("shader_1.shadertrap", example1_text), ("shader_2.shadertrap", example2_text)])
+    def test_stats_shader(self, capsys, tmpdir, origin_file, output_text, conf):
         location = tmpdir.join(origin_file)
         shutil.copy("testdata/stats_shader/" + origin_file, location)
         assert os.path.isfile(location)
-        # TODO add test of the stats_shader function once graphisfuzz and shadertrap are built properly
+        stats_shader(conf["exec_dirs"].graphicsfuzz, conf["shadertools"][0], location,
+                     str(tmpdir.join("tmp.shadertrap")))
         outputs = capsys.readouterr()
+        assert outputs.out == output_text
+        assert len(os.listdir(tmpdir)) == 1

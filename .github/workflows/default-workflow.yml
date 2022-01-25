@@ -57,7 +57,7 @@ jobs:
           key: llvmpipe-
 
       - name: Install llvmpipe
-        if: steps.llvmpipe-cache.outputs.cache-hit != 'true'
+        # if: steps.llvmpipe-cache.outputs.cache-hit != 'true'
         run:
           mkdir ~/llvmpipe && cd ~/llvmpipe && $GITHUB_WORKSPACE/.github/workflows/setup_llvmpipe.sh
 
@@ -73,7 +73,7 @@ jobs:
       # Shadertrap
       - name: Install Shadertrap
         run: |
-          mkdir ~/swiftshader && cd ~/swiftshader && curl -fsSL -o shadertrap.zip https://github.com/google/gfbuild-shadertrap/releases/download/github%2Fgoogle%2Fgfbuild-shadertrap%2Fb4e8470b3d69ef063b318248ae47e25e3081199c/gfbuild-shadertrap-b4e8470b3d69ef063b318248ae47e25e3081199c-Linux_x64_Release.zip && unzip shadertrap.zip
+          mkdir ~/shadertrap && cd ~/shadertrap && curl -fsSL -o shadertrap.zip https://github.com/google/gfbuild-shadertrap/releases/download/github%2Fgoogle%2Fgfbuild-shadertrap%2Fb4e8470b3d69ef063b318248ae47e25e3081199c/gfbuild-shadertrap-b4e8470b3d69ef063b318248ae47e25e3081199c-Linux_x64_Release.zip && unzip shadertrap.zip
 
       # Tests 
       - name: Tests with pytest

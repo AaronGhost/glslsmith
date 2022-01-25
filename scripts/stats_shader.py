@@ -51,11 +51,9 @@ def print_file_report(shader_file):
 
 def stats_shader(graphicsfuzz, shader_tool, shader, harness_file):
     shader_file = r'tmp.glsl'
-    # Post process the shader
-    cmd = ["mvn", "-f", graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e", "exec:java",
-           "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler"]
-    args = r'-Dexec.args=--src ' + str(shader) + r' --dest ' + harness_file
-    cmd += [args]
+    # Post-process the shader
+    # TODO reformat this with a post-processing function call
+    cmd = [graphicsfuzz + "glslsmith-recondition", "--src", str(shader), "--dest", harness_file]
     process_return = run(cmd, capture_output=True, text=True)
     if "SUCCESS!" not in process_return.stdout:
         print(process_return.stderr)
