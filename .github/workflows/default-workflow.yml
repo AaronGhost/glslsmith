@@ -78,4 +78,4 @@ jobs:
       # Tests 
       - name: Tests with pytest
         run: |
-         cd scripts && python -m pytest --ignore graphicsfuzz
+         cd scripts && python -m pytest --ignore graphicsfuzz -q --config_file=$GITHUB_WORKSPACE/.github/workflows/config.xml
