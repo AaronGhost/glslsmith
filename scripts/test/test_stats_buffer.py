@@ -13,10 +13,16 @@
 # limitations under the License.
 import pytest
 
-from scripts.stats_buffer import report_line_nb
+from scripts.stats_buffer import report_line_nb, get_compiler_name_from_buffer
 
 
 @pytest.mark.parametrize("filename, result", [("shader_1.shadertrap", "44"), ("shader_2.shadertrap", "36"),
                                               ("missing.shadertrap", "missing file")])
 def test_report_line_nb(filename, result):
     assert report_line_nb("testdata/stats_buffer/" + filename) == result
+
+
+@pytest.mark.parametrize("buffer_name, compiler_name",
+                         [("whatever/nvidia_0.txt", "nvidia"), ("vulkan_intel_522.txt", "vulkan_intel")])
+def test_get_compiler_name_from_buffer(buffer_name, compiler_name):
+    assert get_compiler_name_from_buffer(buffer_name) == compiler_name

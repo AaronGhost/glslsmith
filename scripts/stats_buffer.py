@@ -30,7 +30,7 @@ def report_line_nb(filename):
 
 
 def get_compiler_name_from_buffer(buffer_name):
-    return buffer_name.split("/")[-1].split("_")[0]
+    return buffer_name.split("/")[-1].rsplit("_", 1)[0]
 
 
 def main():
