@@ -11,10 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pytest
 
-# Install llvmpipe dependencies
-sudo sed -i '/deb-src/s/^# //' /etc/apt/sources.list
-sudo apt-get update
-sudo apt-get install -y libegl1-mesa-dev
-sudo apt-get build-dep -y mesa
-pip install Mako
+from scripts.stats_buffer import report_line_nb
+
+
+@pytest.mark.parametrize("filename, result", [("shader_1.shadertrap", "44"), ("shader_2.shadertrap", "36"),
+                                              ("missing.shadertrap", "missing file")])
+def test_report_line_nb(filename, result):
+    assert report_line_nb("testdata/stats_buffer/" + filename) == result

@@ -18,15 +18,6 @@ import os
 import sys
 
 
-# Internal error code on exit have been distributed as follow
-# Compiler codes are defined by the order of the compiler in the config file and only the first to fail is reported
-# All crash: 1000
-# crash / execution error: 1000 + compiler codes (by power of two)
-# timeout: 2000 + compiler code (by power of two)
-# Miscompilation on one compiler: 3000 + compiler code (by power of two)
-# Angle vs other Compilation: 3099
-# Other differences across compilation: 4000
-# Difference across specific reference and current compilation (dead code removal): 5000 + compiler code
 import common
 
 
@@ -50,7 +41,15 @@ def main():
     execute_reduction(compilers_dict, exec_dirs, shader_tool, ns.shader, ns.ref, ns.clean, ns.double_run,
                       ns.postprocessing)
 
-
+# Internal error code on exit have been distributed as follow
+# Compiler codes are defined by the order of the compiler in the config file and only the first to fail is reported
+# All crash: 1000
+# crash / execution error: 1000 + compiler codes (by power of two)
+# timeout: 2000 + compiler code (by power of two)
+# Miscompilation on one compiler: 3000 + compiler code (by power of two)
+# Angle vs other Compilation: 3099
+# Other differences across compilation: 4000
+# Difference across specific reference and current compilation (dead code removal): 5000 + compiler code
 def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref, clean_dir, double_run, postprocessing):
     # Execute the host file with the different drivers
     common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))

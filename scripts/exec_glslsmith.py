@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-from subprocess import run
+import argparse
 import os
 import shutil
-import argparse
+from subprocess import run
 
-import common, splitter_merger, automate_reducer
+import automate_reducer
+import common
+import splitter_merger
 
 
 def main():
@@ -100,8 +101,10 @@ def main():
                     if ns.glsl_only:
                         for i in range(ns.shadercount):
                             # Give the files their seed name
-                            definitive_path = exec_dirs.shaderoutput + "test_" + str(seed + i) + shader_tool.file_extension
-                            reconditioned_path = exec_dirs.shaderoutput + "test_" + str(seed + i) + "_re" + shader_tool.file_extension
+                            definitive_path = exec_dirs.shaderoutput + "test_" + str(
+                                seed + i) + shader_tool.file_extension
+                            reconditioned_path = exec_dirs.shaderoutput + "test_" + str(
+                                seed + i) + "_re" + shader_tool.file_extension
                             glsl_path = exec_dirs.shaderoutput + "test_" + str(seed + i) + "_re" + ".comp"
                             shutil.move(exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
                                         exec_dirs.shaderoutput + "test_" + str(seed + i) + shader_tool.file_extension)

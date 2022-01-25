@@ -13,20 +13,20 @@
 # limitations under the License.
 
 
-import os
 import argparse
-from subprocess import run
+import os
 
 import common
 
 
-def report_line_nb(seed, dir):
-    if os.path.isfile(dir + str(seed) + ".shadertrap"):
-        cmd = ["wc", "-l", dir + str(seed) + r".shadertrap"]
-        process_return = run(cmd, capture_output=True, text=True)
-        return process_return.stdout.split()[0]
-    else:
-        return "missing"
+def report_line_nb(filename):
+    line_count = 1
+    if os.path.isfile(filename):
+        with open(filename, "r") as file:
+            for line in file:
+                line_count += 1
+        return str(line_count)
+    return "missing file"
 
 
 def get_compiler_name_from_buffer(buffer_name):
@@ -73,8 +73,8 @@ def main():
                 else:
                     compiler_name = get_compiler_name_from_buffer(results[1][0])
                 if compiler_name in ns.compilers or "all" in ns.compilers:
-                    print(compiler_name + ", lines: " + report_line_nb(seed,
-                                                                       exec_dirs.keptshaderdir) + ", seed: " + seed)
+                    print(compiler_name + ", lines: " + report_line_nb(
+                        exec_dirs.keptshaderdir + seed + ".shadertrap") + ", seed: " + seed)
                 compiler_differences[compiler_name] += 1
                 continue
 
@@ -88,14 +88,16 @@ def main():
                         and all(compilers_dict[get_compiler_name_from_buffer(buffer_name)].type == "independent"
                                 for buffer_name in results[0])):
                 if "angle" in ns.compilers or "all" in ns.compilers:
-                    print("angle" + ", lines: " + report_line_nb(seed, exec_dirs.keptshaderdir) + ", seed: " + seed)
+                    print("angle" + ", lines: " + report_line_nb(
+                        exec_dirs.keptshaderdir + seed + ".shadertrap") + ", seed: " + seed)
                 compiler_differences["angle"] += 1
                 continue
 
         # Everything else where a cause is difficult to identify
         compiler_differences["more_than_two"] += 1
         if "more_than_two" in ns.compilers or "all" in ns.compilers:
-            print("More than two different values, lines: " + report_line_nb(seed, exec_dirs.keptshaderdir)
+            print("More than two different values, lines: " + report_line_nb(
+                exec_dirs.keptshaderdir + seed + ".shadertrap")
                   + ", seed: " + seed)
         if ns.verbose:
             if len(results) == len(compilers_dict):

@@ -13,13 +13,13 @@
 # limitations under the License.
 
 import filecmp
+import os
 import re
 import shutil
 import subprocess
 import sys
 from subprocess import run
 from xml.dom import minidom
-import os
 
 
 class ShaderTool:
@@ -60,12 +60,13 @@ def load_dir_settings(filename):
     dumpbufferdir = dirs.getElementsByTagName("dumpbufferdir")[0].childNodes[0].data
     keptbufferdir = dirs.getElementsByTagName("keptbufferdir")[0].childNodes[0].data
     keptshaderdir = dirs.getElementsByTagName("keptshaderdir")[0].childNodes[0].data
-    return DirSettings(graphicsfuzz,execdir, shaderoutput, dumpbufferdir, keptbufferdir, keptshaderdir)
+    return DirSettings(graphicsfuzz, execdir, shaderoutput, dumpbufferdir, keptbufferdir, keptshaderdir)
+
 
 class Compiler:
     available_syscode = 1
 
-    def __init__(self,name, renderer, type, ldpath, vkfilename, othervens):
+    def __init__(self, name, renderer, type, ldpath, vkfilename, othervens):
         self.name = name
         self.renderer = renderer
         self.type = type
@@ -92,15 +93,16 @@ def load_compilers_settings(filename):
         otherenvs = []
         otherenvsxml = compiler.getElementsByTagName("otherenvs")
         if otherenvsxml.length != 1:
-            nb_envs  = int(otherenvsxml.getElementByTagName("length")[0].childNodes[0].data)
+            nb_envs = int(otherenvsxml.getElementByTagName("length")[0].childNodes[0].data)
             for i in range(nb_envs):
-                otherenvs.append(otherenvsxml.getElementByTagName("env_"+str(i))[0].childNodes[0].data)
+                otherenvs.append(otherenvsxml.getElementByTagName("env_" + str(i))[0].childNodes[0].data)
         compilers.append(Compiler(name, renderer, type, ldpath, vkfilename, otherenvs))
     return compilers
 
 
 class Reducer:
-    def __init__(self, reducer_name, reducer_command, interesting_test, reducer_input_name, reducer_output_name, extra_files):
+    def __init__(self, reducer_name, reducer_command, interesting_test, reducer_input_name, reducer_output_name,
+                 extra_files):
         self.name = reducer_name
         self.command = reducer_command
         self.interesting_test = interesting_test
@@ -124,7 +126,7 @@ def load_reducers_settings(filename):
         if extra_file_xml.length != 1:
             nb_files = int(extra_file_xml.getElementByTagName("length")[0].childNodes[0].data)
             for i in range(nb_files):
-                extra_files.append(extra_file_xml.getElementByTagName("file_"+str(i)[0]).childNodes[0].data)
+                extra_files.append(extra_file_xml.getElementByTagName("file_" + str(i)[0]).childNodes[0].data)
         reducers.append(Reducer(name, reducer_command, interesting_test, input_name, output_name, extra_files))
     return reducers
 
@@ -153,11 +155,11 @@ def build_env_from_compiler(compiler):
     if compiler.ldpath != " " or compiler.otherenvs != [] or compiler.type == "angle":
         cmd_env.append("env")
         if compiler.ldpath != " ":
-            cmd_env.append("LD_LIBRARY_PATH="+compiler.ldpath)
+            cmd_env.append("LD_LIBRARY_PATH=" + compiler.ldpath)
         if compiler.type == "angle":
             cmd_env.append("ANGLE_DEFAULT_PLATFORM=vulkan")
         if compiler.vkfilename != " ":
-            cmd_env.append("VK_ICD_FILENAMES="+compiler.vkfilename)
+            cmd_env.append("VK_ICD_FILENAMES=" + compiler.vkfilename)
         for otherenv in compiler.otherenvs:
             cmd_env.append(otherenv)
     return cmd_env
@@ -191,9 +193,9 @@ def comparison_helper(files):
     i = 0
     while i < len(comparison_values) - 1:
         reference = comparison_values[i]
-        for next_files in comparison_values[i+1:]:
+        for next_files in comparison_values[i + 1:]:
             if next_files != reference[0]:
-                if filecmp.cmp(reference[0],next_files[0],False):
+                if filecmp.cmp(reference[0], next_files[0], False):
                     reference += next_files
                     comparison_values.remove(next_files)
         i += 1
@@ -332,7 +334,8 @@ def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, 
     return False, False, "no_crash"
 
 
-def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, output_seed="", move_dir="./", verbose=False,
+def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, output_seed="", move_dir="./",
+                        verbose=False,
                         timeout=10, double_run=False, postprocessing=True):
     no_compile_errors = []
     # Verify that the file exists
@@ -344,7 +347,7 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
     shader_to_compile = shadername
     run_type = "standard"
     if postprocessing:
-        cmd = ["mvn", "-f", graphicsfuzz+"pom.xml", "-pl", "glslsmith", "-q", "-e", "exec:java",
+        cmd = ["mvn", "-f", graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e", "exec:java",
                "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler"]
         args = r'-Dexec.args=--src ' + str(shadername) + r' --dest tmp' + shader_tool.file_extension
         if double_run:
@@ -353,8 +356,8 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
         if verbose:
             print("Reconditioning command: " + " ".join(cmd))
         process_return = run(cmd, capture_output=True, text=True)
-        #print(process_return.stderr)
-        #print(process_return.stdout)
+        # print(process_return.stderr)
+        # print(process_return.stdout)
         if "SUCCESS!" not in process_return.stdout:
             print(process_return.stderr)
             print(process_return.stdout)
@@ -381,7 +384,8 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
                 # Post-process in without useless wrappers
                 cmd = ["mvn", "-f", graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e", "exec:java",
                        "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler"]
-                args = r'-Dexec.args=--src ' + str(shadername) + r' --dest tmp' + str(shader_tool.file_extension) + r' --reduce_wrappers ids.txt'
+                args = r'-Dexec.args=--src ' + str(shadername) + r' --dest tmp' + str(
+                    shader_tool.file_extension) + r' --reduce_wrappers ids.txt'
                 cmd += [args]
                 if verbose:
                     print("Reconditioning command: " + " ".join(cmd))
@@ -408,7 +412,8 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
 
         compiler = compilers_dict[compiler_name]
 
-        crash_result, timeout_result, message = single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type)
+        crash_result, timeout_result, message = single_compile(compiler, shader_to_compile, shader_tool, timeout,
+                                                               run_type)
         no_compile_errors.append(message)
         if timeout_result:
             print("Timeout reached on shader " + shadername + " with " + compiler.name)

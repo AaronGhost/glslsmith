@@ -14,7 +14,8 @@
 import argparse
 import os
 
-import common, reduction_helper
+import common
+import reduction_helper
 
 
 def main():
@@ -38,7 +39,8 @@ def main():
                      double_run=ns.double_run)
 
 
-def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shader_name, ref, shell_file, double_run=False,
+def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shader_name, ref, shell_file,
+                     double_run=False,
                      instrumentation=""):
     # Collect error code from the reduction process
     try:
