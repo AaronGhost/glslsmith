@@ -17,7 +17,7 @@ import argparse
 import os
 import sys
 
-from scripts.utils.analysis_utils import comparison_helper
+from scripts.utils.analysis_utils import comparison_helper, attribute_compiler_results
 from scripts.utils.execution_utils import execute_compilation, env_setup
 from scripts.utils.file_utils import clean_files, find_buffer_file
 
@@ -80,29 +80,15 @@ def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref, 
     for compiler_name in compilers_dict.keys():
         buffers.append("buffer_" + compiler_name + ".txt")
     comparison_result = comparison_helper(buffers)
-    # TODO reuse the code built for stats_shader.py
-    # This will probably require to move the code base to the common file
-    if len(comparison_result) == 2:
-        if len(comparison_result[0]) == 1 or len(comparison_result[1]) == 1:
-            if len(comparison_result[0]) == 1:
-                compiler_name = comparison_result[0][0].split("_")[1].split(".")[0]
-            else:
-                compiler_name = comparison_result[1][0].split("_")[1].split(".")[0]
-            clean_and_exit(str(3000 + (1 << compilers_dict[compiler_name].compilercode)), clean_dir)
-        # Try if we are in the angle case
-        if (all(compilers_dict[buffer_name.split("_")[1].split(".")[0]].type == "angle"
-                for buffer_name in comparison_result[0])
-            and all(compilers_dict[buffer_name.split("_")[1].split(".")[0]].type == "independent"
-                    for buffer_name in comparison_result[1])) \
-                or (all(compilers_dict[buffer_name.split("_")[1].split(".")[0]].type == "angle"
-                        for buffer_name in comparison_result[1])
-                    and all(compilers_dict[buffer_name.split("_")[1].split(".")[0]].type == "independent"
-                            for buffer_name in comparison_result[0])):
+    if len(comparison_result) >= 2:
+        group_compiler = attribute_compiler_results(comparison_result, compilers_dict)
+        if group_compiler == "angle":
             clean_and_exit(str(3099), clean_dir)
-        else:
+        if group_compiler == "more than two":
             clean_and_exit(str(4000) + " " + str(comparison_result), clean_dir)
-    elif len(comparison_result) >= 3:
-        clean_and_exit(str(4000) + " " + str(comparison_result), clean_dir)
+        if group_compiler in compilers_dict:
+            clean_and_exit(str(3000 + (1 << compilers_dict[group_compiler].compilercode)), clean_dir)
+        clean_and_exit(str("Unrecognized compiler: " + group_compiler))
     else:
         if clean_dir:
             clean_files(os.getcwd(), find_buffer_file(os.getcwd()))
