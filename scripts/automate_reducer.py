@@ -22,7 +22,9 @@ import sys
 import time
 from datetime import timedelta
 
-import common, create_shell_test, splitter_merger
+import create_shell_test, splitter_merger
+from scripts.utils.execution_utils import env_setup
+from scripts.utils.file_utils import find_buffer_file, clean_files, find_test_file
 
 
 def main():
@@ -43,7 +45,7 @@ def main():
                         help="adds an extra line in the shell script to generate a reduction log file")
     parser.add_argument('--double-run', dest="double_run", action="store_true",
                         help="Run the program twice eliminating useless wrappers on the second run")
-    ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
+    ns, exec_dirs, compilers_dict, reducer, shader_tool = env_setup(parser)
     if ns.batch:
         files_to_reduce = os.listdir(exec_dirs.keptshaderdir)
         # Exclude files that have been already reduced
@@ -51,7 +53,7 @@ def main():
             if os.path.isfile(exec_dirs.keptshaderdir + file) and len(file.split("_")) > 1:
                 files_to_reduce.remove(file)
                 if os.path.isfile(exec_dirs.keptshaderdir + file.split("_")[0] + shader_tool.file_extension):
-                    files_to_reduce.remove(file.split("_")[0]  + shader_tool.file_extension)
+                    files_to_reduce.remove(file.split("_")[0] + shader_tool.file_extension)
 
         batch_reduction(reducer, compilers_dict, exec_dirs, files_to_reduce, shader_tool, ns.ref, ns.timeout,
                         double_run=ns.double_run,  instrumentation=ns.instru)
@@ -77,7 +79,7 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool,
             shutil.copy("test_reduced" + shader_tool.file_extension,
                         exec_dirs.keptshaderdir + file_radix + override_prefix + shader_tool.file_extension)
             # clean exec_dir
-            common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
+            clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
 
 
 def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader_tool, ref, reduce_timeout, log_file="",
@@ -99,7 +101,7 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
     # Make sure the interestingness test is executable
     interesting_test_stat = os.stat(reducer.interesting_test)
     os.chmod(reducer.interesting_test, interesting_test_stat.st_mode | stat.S_IEXEC)
-    common.clean_files(exec_dirs.execdir, common.find_buffer_file(exec_dirs.execdir))
+    clean_files(exec_dirs.execdir, find_buffer_file(exec_dirs.execdir))
     # Copy the input file to the output (prevents to destroy the harness through execution)
     shutil.copy(test_input, test_output)
     if error_code >= 3000 or (1000 <= error_code <= 1999) or (error_code >= 2000 and reduce_timeout):
@@ -132,18 +134,18 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
             #common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
     elif error_code >= 2000:
         print("Skipping test-case reduction for timeout shader")
-        common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
+        clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
     else:
         print("No error on the current shader")
-        common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
+        clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
 
     # Cleans the current repository
-    common.clean_files(os.getcwd(),
+    clean_files(os.getcwd(),
                        ["temp" + shader_tool.file_extension, reducer.input_file, reducer.output_files, reducer.interesting_test])
-    residues = common.find_test_file(os.getcwd())
+    residues = find_test_file(os.getcwd())
     if test_output in residues:
         residues.remove(test_output)
-    common.clean_files(os.getcwd(), residues)
+    clean_files(os.getcwd(), residues)
 
 
 if __name__ == '__main__':

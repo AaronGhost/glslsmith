@@ -18,8 +18,10 @@ import shutil
 from subprocess import run
 
 import automate_reducer
-import common
 import splitter_merger
+from scripts.utils.analysis_utils import comparison_helper
+from scripts.utils.execution_utils import execute_compilation, env_setup
+from scripts.utils.file_utils import find_buffer_file, clean_files
 
 
 def main():
@@ -54,7 +56,7 @@ def main():
     parser.add_argument('--glsl-only', dest="glsl_only", action="store_true",
                         help="Generate the files, recondition them on the go and split out the glsl shader out of the harness")
 
-    ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
+    ns, exec_dirs, compilers_dict, reducer, shader_tool = env_setup(parser)
 
     # temp value for compiler validation (not revalidating on loops)
     validate_compilers = ns.validatecompilers
@@ -128,7 +130,7 @@ def main():
             if ns.syntaxonly:
                 # Execute the program with the default implementation
                 for i in range(ns.shadercount):
-                    result = common.execute_compilation(
+                    result = execute_compilation(
                         [compilers_dict.values()[0]], exec_dirs.graphicsfuzz, shader_tool,
                         exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension, verbose=True)
                     if result[0] != "no_crash":
@@ -136,8 +138,8 @@ def main():
                     else:
                         print("Shader " + str(i) + " validated")
                 # Clean the directory after usage and exit
-                buffers = common.find_buffer_file(os.getcwd())
-                common.clean_files(os.getcwd(), buffers)
+                buffers = find_buffer_file(os.getcwd())
+                clean_files(os.getcwd(), buffers)
                 print("Compilation of all programs done")
                 return
 
@@ -160,10 +162,10 @@ def main():
                         else:
                             cmd_ending = [shader_tool.path, "--show-gl-info", "--require-vendor-renderer-substring",
                                           compiler.renderer, "scripts/empty.shadertrap"]
-                            cmd = common.build_env_from_compiler(compiler) + cmd_ending
+                            cmd = compiler.build_exec_env() + cmd_ending
                             process_return = run(cmd, capture_output=True, text=True)
-                            buffers = common.find_buffer_file(os.getcwd())
-                            common.clean_files(os.getcwd(), buffers)
+                            buffers = find_buffer_file(os.getcwd())
+                            clean_files(os.getcwd(), buffers)
                         if compiler.renderer not in process_return.stdout:
                             print("compiler not found or not working: " + compiler.name)
                             print(process_return.stdout)
@@ -172,11 +174,11 @@ def main():
                     print("compilers validated")
                     validate_compilers = False
 
-            buffers = common.find_buffer_file(exec_dirs.dumpbufferdir)
-            common.clean_files(exec_dirs.dumpbufferdir, buffers)
+            buffers = find_buffer_file(exec_dirs.dumpbufferdir)
+            clean_files(exec_dirs.dumpbufferdir, buffers)
             # Execute program compilation on each compiler and save the results for the batch
             for i in range(ns.shadercount):
-                common.execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, shader_tool,
+                execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, shader_tool,
                                            exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
                                            str(i), exec_dirs.dumpbufferdir, verbose=ns.verbose,
                                            double_run=ns.double_run, postprocessing=True)
@@ -192,7 +194,7 @@ def main():
             for compiler_name in compilers_dict:
                 buffers_files.append(exec_dirs.dumpbufferdir + "buffer_" + compiler_name + "_" + str(i) + ".txt")
             # Compare and check back the results
-            values = common.comparison_helper(buffers_files)
+            values = comparison_helper(buffers_files)
             if len(values) != 1:
                 print("Different results across implementations for shader " + str(seed + i))
                 # Move shader

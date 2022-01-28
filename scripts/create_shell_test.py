@@ -14,8 +14,8 @@
 import argparse
 import os
 
-import common
 import reduction_helper
+from scripts.utils.execution_utils import env_setup
 
 
 def main():
@@ -33,7 +33,7 @@ def main():
                         help="Run the program twice eliminating useless wrappers on the second run")
     parser.add_argument('--ref', type=int, dest="ref", default=-1, help="TODO")
 
-    ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
+    ns, exec_dirs, compilers_dict, reducer, shader_tool = env_setup(parser)
 
     build_shell_test(compilers_dict, exec_dirs, shader_tool, ns.harness, ns.shader, ns.ref, ns.shellname,
                      double_run=ns.double_run)

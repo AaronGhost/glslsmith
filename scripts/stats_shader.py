@@ -16,7 +16,8 @@ import argparse
 import re
 from subprocess import run
 
-from common import env_setup, clean_files
+from scripts.utils.execution_utils import env_setup
+from scripts.utils.file_utils import clean_files
 from splitter_merger import split
 
 

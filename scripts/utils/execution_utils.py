@@ -12,195 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import filecmp
 import os
 import re
 import shutil
 import subprocess
 import sys
 from subprocess import run
-from xml.dom import minidom
 
-
-class ShaderTool:
-    def __init__(self, name, path, file_extension):
-        self.name = name
-        self.path = path
-        self.file_extension = file_extension
-
-
-def load_shader_tools(filename):
-    xmldoc = minidom.parse(filename)
-    shadertools_xml = xmldoc.getElementsByTagName("shadertool")
-    shadertools = []
-    for shadertool in shadertools_xml:
-        name = shadertool.getElementsByTagName("name")[0].childNodes[0].data
-        path = shadertool.getElementsByTagName("path")[0].childNodes[0].data
-        file_extension = shadertool.getElementsByTagName("extension")[0].childNodes[0].data
-        shadertools.append(ShaderTool(name, path, file_extension))
-    return shadertools
-
-
-class DirSettings:
-    def __init__(self, graphcisfuzz, execdir, shaderoutput, dumpbufferdir, keptbufferdir, keptshaderdir):
-        self.graphicsfuzz = graphcisfuzz
-        self.execdir = execdir
-        self.shaderoutput = shaderoutput
-        self.dumpbufferdir = dumpbufferdir
-        self.keptbufferdir = keptbufferdir
-        self.keptshaderdir = keptshaderdir
-
-
-def load_dir_settings(filename):
-    xmldoc = minidom.parse(filename)
-    dirs = xmldoc.getElementsByTagName("dirsettings")[0]
-    graphicsfuzz = dirs.getElementsByTagName("graphicsfuzz")[0].childNodes[0].data
-    execdir = dirs.getElementsByTagName("execdir")[0].childNodes[0].data
-    shaderoutput = dirs.getElementsByTagName("shaderoutput")[0].childNodes[0].data
-    dumpbufferdir = dirs.getElementsByTagName("dumpbufferdir")[0].childNodes[0].data
-    keptbufferdir = dirs.getElementsByTagName("keptbufferdir")[0].childNodes[0].data
-    keptshaderdir = dirs.getElementsByTagName("keptshaderdir")[0].childNodes[0].data
-    return DirSettings(graphicsfuzz, execdir, shaderoutput, dumpbufferdir, keptbufferdir, keptshaderdir)
-
-
-class Compiler:
-    available_syscode = 1
-
-    def __init__(self, name, renderer, type, ldpath, vkfilename, othervens):
-        self.name = name
-        self.renderer = renderer
-        self.type = type
-        self.ldpath = ldpath
-        self.vkfilename = vkfilename
-        self.otherenvs = othervens
-        self.compilercode = Compiler.available_syscode
-        Compiler.available_syscode += 1
-
-    def __str__(self):
-        return self.name
-
-
-def load_compilers_settings(filename):
-    xmldoc = minidom.parse(filename)
-    compilers = []
-    compilersxml = xmldoc.getElementsByTagName("compiler")
-    for compiler in compilersxml:
-        name = compiler.getElementsByTagName("name")[0].childNodes[0].data
-        renderer = compiler.getElementsByTagName("renderer")[0].childNodes[0].data
-        type = compiler.getElementsByTagName("type")[0].childNodes[0].data
-        ldpath = compiler.getElementsByTagName("LD_LIBRARY_PATH")[0].childNodes[0].data
-        vkfilename = compiler.getElementsByTagName("VK_ICD_FILENAMES")[0].childNodes[0].data
-        otherenvs = []
-        otherenvsxml = compiler.getElementsByTagName("otherenvs")
-        if otherenvsxml.length != 1:
-            nb_envs = int(otherenvsxml.getElementByTagName("length")[0].childNodes[0].data)
-            for i in range(nb_envs):
-                otherenvs.append(otherenvsxml.getElementByTagName("env_" + str(i))[0].childNodes[0].data)
-        compilers.append(Compiler(name, renderer, type, ldpath, vkfilename, otherenvs))
-    return compilers
-
-
-class Reducer:
-    def __init__(self, reducer_name, reducer_command, interesting_test, reducer_input_name, reducer_output_name,
-                 extra_files):
-        self.name = reducer_name
-        self.command = reducer_command
-        self.interesting_test = interesting_test
-        self.input_file = reducer_input_name
-        self.output_files = reducer_output_name
-        self.extra_files_to_build = extra_files
-
-
-def load_reducers_settings(filename):
-    xmldoc = minidom.parse(filename)
-    reducers = []
-    reducerxml = xmldoc.getElementsByTagName("reducer")
-    for reducer in reducerxml:
-        name = reducer.getElementsByTagName("name")[0].childNodes[0].data
-        reducer_command = reducer.getElementsByTagName("command")[0].childNodes[0].data
-        interesting_test = reducer.getElementsByTagName("interesting")[0].childNodes[0].data
-        input_name = reducer.getElementsByTagName("input_file")[0].childNodes[0].data
-        output_name = reducer.getElementsByTagName("output_file")[0].childNodes[0].data
-        extra_files = []
-        extra_file_xml = reducer.getElementsByTagName("extra_files")
-        if extra_file_xml.length != 1:
-            nb_files = int(extra_file_xml.getElementByTagName("length")[0].childNodes[0].data)
-            for i in range(nb_files):
-                extra_files.append(extra_file_xml.getElementByTagName("file_" + str(i)[0]).childNodes[0].data)
-        reducers.append(Reducer(name, reducer_command, interesting_test, input_name, output_name, extra_files))
-    return reducers
-
-
-def concatenate_files(outputname, files):
-    out = b''
-    for fileadd in files:
-        if 'buffer' in fileadd:
-            with open(fileadd, 'rb') as f:
-                out += f.read()
-    with open(outputname, 'wb') as dumpfile:
-        dumpfile.write(out)
-
-
-def clean_files(current_dir, files_list):
-    ref = os.getcwd()
-    os.chdir(current_dir)
-    for file in files_list:
-        if os.path.isfile(file):
-            os.remove(file)
-    os.chdir(ref)
-
-
-def build_env_from_compiler(compiler):
-    cmd_env = []
-    if compiler.ldpath != " " or compiler.otherenvs != [] or compiler.type == "angle":
-        cmd_env.append("env")
-        if compiler.ldpath != " ":
-            cmd_env.append("LD_LIBRARY_PATH=" + compiler.ldpath)
-        if compiler.type == "angle":
-            cmd_env.append("ANGLE_DEFAULT_PLATFORM=vulkan")
-        if compiler.vkfilename != " ":
-            cmd_env.append("VK_ICD_FILENAMES=" + compiler.vkfilename)
-        for otherenv in compiler.otherenvs:
-            cmd_env.append(otherenv)
-    return cmd_env
-
-
-def find_file(current_dir, prefix):
-    file_list = os.listdir(current_dir)
-    buffer_files = []
-    if current_dir[-1] != "/":
-        current_dir += "/"
-    for file in file_list:
-        if os.path.isfile(current_dir + file):
-            if prefix in file:
-                buffer_files.append(file)
-    return buffer_files
-
-
-def find_buffer_file(current_dir):
-    return find_file(current_dir, "buffer_")
-
-
-def find_test_file(current_dir):
-    return find_file(current_dir, "test")
-
-
-def comparison_helper(files):
-    comparison_values = []
-    for file in files:
-        comparison_values.append([file])
-
-    i = 0
-    while i < len(comparison_values) - 1:
-        reference = comparison_values[i]
-        for next_files in comparison_values[i + 1:]:
-            if next_files != reference[0]:
-                if filecmp.cmp(reference[0], next_files[0], False):
-                    reference += next_files
-                    comparison_values.remove(next_files)
-        i += 1
-
-    return comparison_values
+from scripts.utils.Compiler import Compiler
+from scripts.utils.DirSettings import DirSettings
+from scripts.utils.Reducer import Reducer
+from scripts.utils.ShaderTool import ShaderTool
+from scripts.utils.file_utils import find_buffer_file, clean_files, concatenate_files
 
 
 def env_setup(parser):
@@ -212,17 +35,17 @@ def env_setup(parser):
     ns = parser.parse_args(sys.argv[1:])
 
     # Parse directory config
-    exec_dirs = load_dir_settings(ns.config)
+    exec_dirs = DirSettings.load_dir_settings(ns.config)
 
     # Parse the compiler config to a compiler dictionary
-    compilers = load_compilers_settings(ns.config)
+    compilers = Compiler.load_compilers_settings(ns.config)
     compilers_dict = {}
     for compiler in compilers:
         if not hasattr(ns, "restrict_compilers") or not ns.restrict_compilers or compiler in ns.restrict_compilers:
             compilers_dict[compiler.name] = compiler
 
     # Parse available reducers
-    reducers = load_reducers_settings(ns.config)
+    reducers = Reducer.load_reducers_settings(ns.config)
     if len(reducers) == 0:
         exit("No reducer has been declared at installation, please rerun installation or edit the configuration file")
     reducer = reducers[0]
@@ -236,7 +59,7 @@ def env_setup(parser):
             exit("No reducer named " + str(ns.reducer) + " configured")
 
     # Parse host language configuration
-    shader_tools = load_shader_tools(ns.config)
+    shader_tools = ShaderTool.load_shader_tools(ns.config)
     shader_tool = shader_tools[0]
     shader_tool_found = False
     for possible_tool in shader_tools:
@@ -303,7 +126,7 @@ def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, 
             else:
                 cmd_ending = [shader_tool.path, "--require-vendor-renderer-substring", compiler.renderer,
                               shader_to_compile]
-            cmd = build_env_from_compiler(compiler) + cmd_ending
+            cmd = compiler.build_exec_env() + cmd_ending
             if verbose:
                 print("Shadertrap command: " + " ".join(cmd))
             process_return = run(cmd, capture_output=True, text=True, timeout=timeout)

@@ -14,27 +14,16 @@
 
 import pytest
 
-from scripts.common import Compiler, ShaderTool
-from scripts.stats_buffer import report_line_nb, get_compiler_name, extract_seed_from_buffer_files, get_seed, \
-    attribute_compiler_results, stats_buffers
+from scripts.stats_buffer import report_line_nb, extract_seed_from_buffer_files, attribute_compiler_results, \
+    stats_buffers
+from scripts.utils.Compiler import Compiler
+from scripts.utils.ShaderTool import ShaderTool
 
 
 @pytest.mark.parametrize("filename, result", [("shader_1.shadertrap", "43"), ("shader_2.shadertrap", "35"),
                                               ("missing.shadertrap", "missing file")])
 def test_report_line_nb(filename, result):
     assert report_line_nb("testdata/stats_buffer/" + filename) == result
-
-
-@pytest.mark.parametrize("buffer_name, compiler_name",
-                         [("whatever/nvidia_0.txt", "nvidia"), ("vulkan_intel_522.txt", "vulkan_intel")])
-def test_get_compiler_name(buffer_name, compiler_name):
-    assert get_compiler_name(buffer_name) == compiler_name
-
-
-@pytest.mark.parametrize("buffer_name, seed",
-                         [("whatever/nvidia_0.txt", "0"), ("vulkan_intel_522.txt", "522")])
-def test_get_compiler_name(buffer_name, seed):
-    assert get_seed(buffer_name) == seed
 
 
 @pytest.mark.parametrize("file_list, unique_seed",

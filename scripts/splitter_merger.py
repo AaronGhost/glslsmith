@@ -16,7 +16,7 @@ import argparse
 import re
 import sys
 
-import common
+from scripts.utils.execution_utils import env_setup
 
 
 def get_glslcode_from_shadertrap(shadertrap_text):
@@ -73,7 +73,7 @@ def main():
                              "location")
     parser.add_argument("--merge", dest="merge_files", nargs=2,
                         help="first argument is the shadertrap code, second is the glsl code")
-    ns, _, _, _, shader_tool = common.env_setup(parser)
+    ns, _, _, _, shader_tool = env_setup(parser)
     ns = parser.parse_args(sys.argv[1:])
 
     if not ns.split_file and not ns.merge_files:

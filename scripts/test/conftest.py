@@ -14,7 +14,10 @@
 
 import pytest
 
-from scripts.common import load_dir_settings, load_compilers_settings, load_reducers_settings, load_shader_tools
+from scripts.utils.DirSettings import DirSettings
+from scripts.utils.Compiler import Compiler
+from scripts.utils.Reducer import Reducer
+from scripts.utils.ShaderTool import ShaderTool
 
 
 def pytest_addoption(parser):
@@ -24,8 +27,8 @@ def pytest_addoption(parser):
 @pytest.fixture(scope="session")
 def conf(request):
     conf_path = request.config.getoption("--config_file")
-    conf_dict = {"exec_dirs": load_dir_settings(conf_path),
-                 "compilers": load_compilers_settings(conf_path),
-                 "reducers": load_reducers_settings(conf_path),
-                 "shadertools": load_shader_tools(conf_path)}
+    conf_dict = {"exec_dirs": DirSettings.load_dir_settings(conf_path),
+                 "compilers": Compiler.load_compilers_settings(conf_path),
+                 "reducers": Reducer.load_reducers_settings(conf_path),
+                 "shadertools": ShaderTool.load_shader_tools(conf_path)}
     return conf_dict
