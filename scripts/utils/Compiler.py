@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import sys
 from xml.dom import minidom
 
 
@@ -57,10 +57,10 @@ class Compiler:
             ldpath = compiler.getElementsByTagName("LD_LIBRARY_PATH")[0].childNodes[0].data
             vkfilename = compiler.getElementsByTagName("VK_ICD_FILENAMES")[0].childNodes[0].data
             otherenvs = []
-            otherenvsxml = compiler.getElementsByTagName("otherenvs")
-            if otherenvsxml.length != 1:
-                nb_envs = int(otherenvsxml.getElementByTagName("length")[0].childNodes[0].data)
+            otherenvsxml = compiler.getElementsByTagName("otherenvs")[0]
+            if len(otherenvsxml.getElementsByTagName("length")) != 0:
+                nb_envs = int(otherenvsxml.getElementsByTagName("length")[0].childNodes[0].data)
                 for i in range(nb_envs):
-                    otherenvs.append(otherenvsxml.getElementByTagName("env_" + str(i))[0].childNodes[0].data)
+                    otherenvs.append(otherenvsxml.getElementsByTagName("env_" + str(i))[0].childNodes[0].data)
             compilers.append(Compiler(name, renderer, compiler_type, ldpath, vkfilename, otherenvs))
         return compilers

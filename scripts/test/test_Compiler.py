@@ -47,3 +47,24 @@ def test_unique_sys_code(compilers_data, name, code):
 def test_build_exec_env(compilers_data, name, env):
     exec_res = compilers_data[name].build_exec_env()
     assert exec_res == env
+
+
+def test_load_compilers_settings():
+    compilers = Compiler.load_compilers_settings("testdata/xml_files/compilers.xml")
+    # Test first compiler
+    compiler_1 = compilers[0]
+    assert compiler_1.name == "aba"
+    assert compiler_1.renderer == "ababa"
+    assert compiler_1.type == "angle"
+    assert compiler_1.ldpath == "/aba/build/lib/x86_64-linux-gnu"
+    assert compiler_1.vkfilename == "/aba/build/lib/vk_aba.json"
+    assert compiler_1.otherenvs == ["X=\"y\""]
+
+    # Test second compiler
+    compiler_2 = compilers[1]
+    assert compiler_2.name == "aba_cus"
+    assert compiler_2.renderer == "aba_ta"
+    assert compiler_2.type == "independent"
+    assert compiler_2.ldpath == "/abacus/build/lib/x86_64-linux-gnu"
+    assert compiler_2.vkfilename == " "
+    assert compiler_2.otherenvs == []
