@@ -69,7 +69,7 @@ def test_stats_buffers(capsys):
     # All lines from the normal output should be in, the more than two group each carry an extra line before hand
     verbose_lines = lines.copy()
     verbose_lines[4] = "[['a', 'a_x'], ['b', 'c'], ['d']]\nGroup: more than two, lines: 21, seed: 3\n"
-    verbose_lines[9] = "[['a'], ['b'], ['c'], ['d'], ['a_x']]\nGroup: more than two, lines: 5, seed: 522\n"
+    verbose_lines[9] = "[['a'], ['a_x'], ['b'], ['c'], ['d']]\nGroup: more than two, lines: 5, seed: 522\n"
     verbose_lines[10] = "[['a', 'b', 'a_x'], ['c', 'd']]\nGroup: more than two, lines: 2, seed: 2358\n"
 
     # Test for the length of the outputs and then for all "lines" contained in it

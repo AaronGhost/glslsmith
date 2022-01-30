@@ -12,26 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import filecmp
+import hashlib
 
 from scripts.utils.file_utils import get_compiler_name
 
 
 def comparison_helper(files):
-    comparison_values = []
+    comparison_values = {}
     for file in files:
-        comparison_values.append([file])
-    i = 0
-    while i < len(comparison_values) - 1:
-        reference = comparison_values[i]
-        for next_files in comparison_values[i + 1:]:
-            if next_files != reference[0]:
-                if filecmp.cmp(reference[0], next_files[0], False):
-                    reference += next_files
-                    comparison_values.remove(next_files)
-        i += 1
-
-    return comparison_values
+        with open(file, "r") as fid:
+            digest = hashlib.md5(fid.read().encode("ascii")).hexdigest()
+            if digest in comparison_values:
+                comparison_values[digest].append(file)
+            else:
+                comparison_values[digest] = [file]
+    values = list(comparison_values.values())
+    values.sort()
+    return values
 
 
 def attribute_compiler_results(results, compilers_dict):
