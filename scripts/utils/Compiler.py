@@ -28,7 +28,7 @@ class Compiler:
         self.compilercode = Compiler.available_syscode
         Compiler.available_syscode += 1
 
-    def __str__(self):  # pragma: no-cover
+    def __str__(self):  # pragma: no cover
         return self.name
 
     def build_exec_env(self):

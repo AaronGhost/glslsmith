@@ -24,10 +24,11 @@ def compilers_data():
            "c": Compiler("c", "c", "angle", "angle/c/data", " ", []),
            "d_x": Compiler("d_x", "d", "angle", "angle/c/data", "c.json", []),
            "e": Compiler("e", "e", "independent", "en/", "end.json", ["WHATEVER=\"indep\"", "X=\"y\""]),
-           "f": Compiler("f", "f", "angle", "en/", " ", ["WHATEVER=\"ang\"", "X=\"z\""])}
+           "f": Compiler("f", "f", "angle", "en/", " ", ["WHATEVER=\"ang\"", "X=\"z\""]),
+           "g": Compiler("g", "g", "angle", " ", "ga.json", [])}
 
 
-@pytest.mark.parametrize("name, code", [("a", 1), ("ba", 2), ("c", 3), ("d_x", 4), ("e", 5), ("f", 6)])
+@pytest.mark.parametrize("name, code", [("a", 1), ("ba", 2), ("c", 3), ("d_x", 4), ("e", 5), ("f", 6), ("g", 7)])
 def test_unique_sys_code(compilers_data, name, code):
     assert compilers_data[name].compilercode == code
 
@@ -43,7 +44,8 @@ def test_unique_sys_code(compilers_data, name, code):
                             "X=\"y\""]),
                           ("f",
                            ["env", "LD_LIBRARY_PATH=en/", "ANGLE_DEFAULT_PLATFORM=vulkan", "WHATEVER=\"ang\"",
-                            "X=\"z\""])])
+                            "X=\"z\""]),
+                          ("g", ["env", "ANGLE_DEFAULT_PLATFORM=vulkan", "VK_ICD_FILENAMES=ga.json"])])
 def test_build_exec_env(compilers_data, name, env):
     exec_res = compilers_data[name].build_exec_env()
     assert exec_res == env

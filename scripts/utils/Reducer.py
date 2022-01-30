@@ -25,7 +25,7 @@ class Reducer:
         self.output_files = reducer_output_name
         self.extra_files_to_build = extra_files
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return self.name
 
     @staticmethod

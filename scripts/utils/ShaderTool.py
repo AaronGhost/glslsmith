@@ -21,7 +21,7 @@ class ShaderTool:
         self.path = path
         self.file_extension = file_extension
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return self.name
 
     @staticmethod

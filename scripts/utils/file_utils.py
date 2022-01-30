@@ -45,11 +45,11 @@ def find_file(current_dir, prefix=""):
     return buffer_files
 
 
-def find_buffer_file(current_dir):  # pragma:no-cover
+def find_buffer_file(current_dir):  # pragma: no cover
     return find_file(current_dir, "buffer_")
 
 
-def find_test_file(current_dir):  # pragma: no-cover
+def find_test_file(current_dir):  # pragma: no cover
     return find_file(current_dir, "test")
 
 
