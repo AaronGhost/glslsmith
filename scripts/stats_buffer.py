@@ -59,11 +59,10 @@ def stats_buffers(buffer_dir, shader_dir, compilers_dict, shader_tools, verbose)
         compiler_differences[group_name] += 1
 
         if verbose and group_name == "more than two":
-            print(list(map(lambda x: list(map(lambda y: get_compiler_name(y), x)), results)))
+            print(results)
         # Report the number of lines for each shader
         for tool in shader_tools:
             if os.path.isfile(shader_dir + seed + tool.file_extension):
-
                 print("Group: " + group_name + ", lines: " + report_line_nb(
                     shader_dir + seed + tool.file_extension) + ", seed: " + seed)
                 break

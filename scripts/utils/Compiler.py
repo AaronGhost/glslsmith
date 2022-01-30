@@ -18,22 +18,22 @@ from xml.dom import minidom
 class Compiler:
     available_syscode = 1
 
-    def __init__(self, name, renderer, type, ldpath, vkfilename, othervens):
+    def __init__(self, name, renderer, compiler_type, ldpath, vkfilename, othervens):
         self.name = name
         self.renderer = renderer
-        self.type = type
+        self.type = compiler_type
         self.ldpath = ldpath
         self.vkfilename = vkfilename
         self.otherenvs = othervens
         self.compilercode = Compiler.available_syscode
         Compiler.available_syscode += 1
 
-    def __str__(self):
+    def __str__(self):  # pragma: no-cover
         return self.name
 
     def build_exec_env(self):
         cmd_env = []
-        if self.ldpath != " " or self.otherenvs != [] or self.type == "angle":
+        if self.ldpath != " " or self.otherenvs != [] or self.type == "angle" or self.vkfilename != " ":
             cmd_env.append("env")
             if self.ldpath != " ":
                 cmd_env.append("LD_LIBRARY_PATH=" + self.ldpath)
@@ -53,7 +53,7 @@ class Compiler:
         for compiler in compilersxml:
             name = compiler.getElementsByTagName("name")[0].childNodes[0].data
             renderer = compiler.getElementsByTagName("renderer")[0].childNodes[0].data
-            type = compiler.getElementsByTagName("type")[0].childNodes[0].data
+            compiler_type = compiler.getElementsByTagName("type")[0].childNodes[0].data
             ldpath = compiler.getElementsByTagName("LD_LIBRARY_PATH")[0].childNodes[0].data
             vkfilename = compiler.getElementsByTagName("VK_ICD_FILENAMES")[0].childNodes[0].data
             otherenvs = []
@@ -62,5 +62,5 @@ class Compiler:
                 nb_envs = int(otherenvsxml.getElementByTagName("length")[0].childNodes[0].data)
                 for i in range(nb_envs):
                     otherenvs.append(otherenvsxml.getElementByTagName("env_" + str(i))[0].childNodes[0].data)
-            compilers.append(Compiler(name, renderer, type, ldpath, vkfilename, otherenvs))
+            compilers.append(Compiler(name, renderer, compiler_type, ldpath, vkfilename, otherenvs))
         return compilers

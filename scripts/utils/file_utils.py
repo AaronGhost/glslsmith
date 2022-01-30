@@ -34,23 +34,22 @@ def clean_files(current_dir, files_list):
     os.chdir(ref)
 
 
-def find_file(current_dir, prefix):
+def find_file(current_dir, prefix=""):
     file_list = os.listdir(current_dir)
     buffer_files = []
     if current_dir[-1] != "/":
         current_dir += "/"
     for file in file_list:
-        if os.path.isfile(current_dir + file):
-            if prefix in file:
-                buffer_files.append(file)
+        if os.path.isfile(current_dir + file) and prefix in file:
+            buffer_files.append(file)
     return buffer_files
 
 
-def find_buffer_file(current_dir):
+def find_buffer_file(current_dir):  # pragma:no-cover
     return find_file(current_dir, "buffer_")
 
 
-def find_test_file(current_dir):
+def find_test_file(current_dir):  # pragma: no-cover
     return find_file(current_dir, "test")
 
 

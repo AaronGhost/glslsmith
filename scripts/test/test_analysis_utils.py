@@ -1,7 +1,25 @@
 import pytest
 
 from scripts.utils.Compiler import Compiler
-from scripts.utils.analysis_utils import attribute_compiler_results
+from scripts.utils.analysis_utils import attribute_compiler_results, comparison_helper
+
+
+@pytest.mark.parametrize("seed, group",
+                         [(0, [["a"], ["a_x", "b", "c", "d"]]),
+                          (1, [["a"], ["a_x", "b", "c", "d"]]),
+                          (2, [["a", "a_x", "c"], ["b", "d"]]),
+                          (3, [["a", "a_x"], ["b", "c"], ["d"]]),
+                          (4, [["a", "a_x", "b", "d"], ["c"]]),
+                          (5, [["a", "a_x", "c"], ["b", "d"]]),
+                          (15, [["a", "a_x", "b", "c"], ["d"]]),
+                          (333, [["a"], ["a_x", "b", "c", "d"]]),
+                          (522, [["a"], ["a_x"], ["b"], ["c"], ["d"]]),
+                          (2358, [["a", "a_x", "b"], ["c", "d"]]),
+                          (9999, [["a", "b", "c", "d"], ["a_x"]])])
+def test_comparison_helper(seed, group):
+    file_list = list(
+        map(lambda text: "testdata/keptbuf/" + text + "_" + str(seed) + ".txt", ["a", "a_x", "b", "c", "d"]))
+    assert comparison_helper(file_list) == group
 
 
 @pytest.mark.parametrize("results, group", [([["a", "b"], ["c"]], "c"),

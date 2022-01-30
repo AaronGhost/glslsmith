@@ -23,9 +23,9 @@ def comparison_helper(files):
         with open(file, "r") as fid:
             digest = hashlib.md5(fid.read().encode("ascii")).hexdigest()
             if digest in comparison_values:
-                comparison_values[digest].append(file)
+                comparison_values[digest].append(get_compiler_name(file))
             else:
-                comparison_values[digest] = [file]
+                comparison_values[digest] = [get_compiler_name(file)]
     values = list(comparison_values.values())
     values.sort()
     return values
@@ -36,17 +36,17 @@ def attribute_compiler_results(results, compilers_dict):
     if len(results) == 2:
         if len(results[0]) == 1 or len(results[1]) == 1:
             if len(results[0]) == 1:
-                return get_compiler_name(results[0][0])
+                return results[0][0]
             else:
-                return get_compiler_name(results[1][0])
+                return results[1][0]
         # A family of compilers disagrees (Angle)
-        if (all(compilers_dict[get_compiler_name(buffer_name)].type == "angle"
+        if (all(compilers_dict[buffer_name].type == "angle"
                 for buffer_name in results[0])
-            and all(compilers_dict[get_compiler_name(buffer_name)].type == "independent"
+            and all(compilers_dict[buffer_name].type == "independent"
                     for buffer_name in results[1])) \
-                or (all(compilers_dict[get_compiler_name(buffer_name)].type == "angle"
+                or (all(compilers_dict[buffer_name].type == "angle"
                         for buffer_name in results[1])
-                    and all(compilers_dict[get_compiler_name(buffer_name)].type == "independent"
+                    and all(compilers_dict[buffer_name].type == "independent"
                             for buffer_name in results[0])):
             return "angle"
     # Something else is happening
