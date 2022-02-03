@@ -11,11 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import sys
 
 import pytest
 
-from scripts.stats_buffer import report_line_nb, extract_seed_from_buffer_files, attribute_compiler_results, \
-    stats_buffers
+from scripts.stats_buffer import report_line_nb, extract_seed_from_buffer_files, stats_buffers
 from scripts.utils.Compiler import Compiler
 from scripts.utils.ShaderTool import ShaderTool
 
@@ -35,7 +35,14 @@ def test_extract_seed_from_buffer_files(file_list, unique_seed):
     assert extract_seed_from_buffer_files(file_list) == unique_seed
 
 
-def test_stats_buffers(capsys):
+def verify_outputs(capsys, lines):
+    outputs = capsys.readouterr()
+    assert len(outputs.out.splitlines()) == len(lines)
+    for line in lines:
+        assert line in str(outputs.out)
+
+
+def test_stats_buffers_and_main(capsys):
     # Prepare compilers for the scenario
     compiler_dict = {"a": Compiler("a", "a", "angle", "", "", []),
                      "b": Compiler("b", "b", "independent", "", "", []),
@@ -45,7 +52,7 @@ def test_stats_buffers(capsys):
     shadertools = [ShaderTool("shadertrap", "shadertrap/shadertrap", ".shadertrap")]
 
     # Lines that should be in the normal output
-    lines = ["11 different seeds\n",
+    lines = ["12 different seeds\n",
              "Group: a, lines: 12, seed: 0\n",
              "Group: a, lines: 15, seed: 1\n",
              "Group: angle, lines: 18, seed: 2\n",
@@ -59,7 +66,7 @@ def test_stats_buffers(capsys):
              "Group: a_x, lines: 13, seed: 9999\n",
              "========= SUMMARY ================================================================\n",
              "a different values: 3\n",
-             "b different values: 0\n",
+             "b different values: 1\n",
              "c different values: 1\n",
              "d different values: 1\n",
              "a_x different values: 1\n",
@@ -73,13 +80,10 @@ def test_stats_buffers(capsys):
     verbose_lines[10] = "[['a', 'b', 'a_x'], ['c', 'd']]\nGroup: more than two, lines: 2, seed: 2358\n"
 
     # Test for the length of the outputs and then for all "lines" contained in it
+    # Test without verbose
     stats_buffers("testdata/keptbuf/", "testdata/keptshad/", compiler_dict, shadertools, False)
-    outputs = capsys.readouterr()
-    assert len(outputs.out.splitlines()) == 20
-    for line in lines:
-        assert line in str(outputs.out)
+    verify_outputs(capsys, lines)
+
+    # Test with verbose
     stats_buffers("testdata/keptbuf/", "testdata/keptshad/", compiler_dict, shadertools, True)
-    outputs = capsys.readouterr()
-    assert len(outputs.out.splitlines()) == 23
-    for line in verbose_lines:
-        assert line in str(outputs.out)
+    verify_outputs(capsys, verbose_lines)
