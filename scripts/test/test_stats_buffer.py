@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import sys
 
 import pytest
 
@@ -33,13 +32,6 @@ def test_report_line_nb(filename, result):
                            , ["0", "1", "150", "444"])])
 def test_extract_seed_from_buffer_files(file_list, unique_seed):
     assert extract_seed_from_buffer_files(file_list) == unique_seed
-
-
-def verify_outputs(capsys, lines):
-    outputs = capsys.readouterr()
-    assert len(outputs.out.splitlines()) == len(lines)
-    for line in lines:
-        assert line in str(outputs.out)
 
 
 def test_stats_buffers_and_main(capsys):
@@ -82,8 +74,14 @@ def test_stats_buffers_and_main(capsys):
     # Test for the length of the outputs and then for all "lines" contained in it
     # Test without verbose
     stats_buffers("testdata/keptbuf/", "testdata/keptshad/", compiler_dict, shadertools, False)
-    verify_outputs(capsys, lines)
+    outputs = capsys.readouterr()
+    assert len(outputs.out.splitlines()) == 20
+    for line in lines:
+        assert line in str(outputs.out)
 
     # Test with verbose
     stats_buffers("testdata/keptbuf/", "testdata/keptshad/", compiler_dict, shadertools, True)
-    verify_outputs(capsys, verbose_lines)
+    outputs = capsys.readouterr()
+    assert len(outputs.out.splitlines()) == 23
+    for line in verbose_lines:
+        assert line in str(outputs.out)

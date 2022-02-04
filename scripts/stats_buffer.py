@@ -75,7 +75,7 @@ def stats_buffers(buffer_dir, shader_dir, compilers_dict, shader_tools, verbose)
     print("more than two groups of values: " + str(compiler_differences["more than two"]))
 
 
-def main():
+def main():  # pragma: no cover
     parser = argparse.ArgumentParser(description="Print stats and info about difference showing buffers")
     parser.add_argument('--verbose', dest="verbose", action="store_true", help="Gives the detail of agreeing compiler "
                                                                                "for non-trivial case")

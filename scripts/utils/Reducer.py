@@ -40,10 +40,10 @@ class Reducer:
             input_name = reducer.getElementsByTagName("input_file")[0].childNodes[0].data
             output_name = reducer.getElementsByTagName("output_file")[0].childNodes[0].data
             extra_files = []
-            extra_file_xml = reducer.getElementsByTagName("extra_files")
-            if extra_file_xml.length != 1:
-                nb_files = int(extra_file_xml.getElementByTagName("length")[0].childNodes[0].data)
+            extra_file_xml = reducer.getElementsByTagName("extra_files")[0]
+            if len(extra_file_xml.getElementsByTagName("length")) != 0:
+                nb_files = int(extra_file_xml.getElementsByTagName("length")[0].childNodes[0].data)
                 for i in range(nb_files):
-                    extra_files.append(extra_file_xml.getElementByTagName("file_" + str(i)[0]).childNodes[0].data)
+                    extra_files.append(extra_file_xml.getElementsByTagName("file_" + str(i))[0].childNodes[0].data)
             reducers.append(Reducer(name, reducer_command, interesting_test, input_name, output_name, extra_files))
         return reducers
