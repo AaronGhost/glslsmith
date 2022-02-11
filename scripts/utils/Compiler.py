@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import sys
 from xml.dom import minidom
 
 
@@ -30,6 +29,12 @@ class Compiler:
 
     def __str__(self):  # pragma: no cover
         return self.name
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        else:
+            return False
 
     def build_exec_env(self):
         cmd_env = []

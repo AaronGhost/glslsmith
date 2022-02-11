@@ -15,9 +15,9 @@
 import argparse
 import os
 
-from scripts.utils.analysis_utils import attribute_compiler_results, comparison_helper
-from scripts.utils.execution_utils import env_setup
-from scripts.utils.file_utils import get_compiler_name, get_seed
+from utils.analysis_utils import attribute_compiler_results, comparison_helper
+from utils.execution_utils import env_setup
+from utils.file_utils import get_compiler_name, get_seed
 
 
 def report_line_nb(filename):

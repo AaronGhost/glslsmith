@@ -15,7 +15,7 @@ import argparse
 import os
 
 import reduction_helper
-from scripts.utils.execution_utils import env_setup
+from utils.execution_utils import env_setup
 
 
 def main():

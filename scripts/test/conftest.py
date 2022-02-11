@@ -14,8 +14,8 @@
 
 import pytest
 
-from scripts.utils.DirSettings import DirSettings
 from scripts.utils.Compiler import Compiler
+from scripts.utils.DirSettings import DirSettings
 from scripts.utils.Reducer import Reducer
 from scripts.utils.ShaderTool import ShaderTool
 
@@ -32,3 +32,27 @@ def conf(request):
                  "reducers": Reducer.load_reducers_settings(conf_path),
                  "shadertools": ShaderTool.load_shader_tools(conf_path)}
     return conf_dict
+
+
+@pytest.fixture(scope="session")
+def compilers_list():
+    Compiler.available_syscode = 1
+    return [Compiler("a", "a", "independent", " ", " ", []),
+            Compiler("ba", "ba", "independent", "/ba/ba/", " ", []),
+            Compiler("c", "c", "angle", "angle/c/data", " ", []),
+            Compiler("d_x", "d", "angle", "angle/c/data", "c.json", []),
+            Compiler("e", "e", "independent", "en/", "end.json", ["WHATEVER=\"indep\"", "X=\"y\""]),
+            Compiler("f", "f", "angle", "en/", " ", ["WHATEVER=\"ang\"", "X=\"z\""]),
+            Compiler("g", "g", "angle", " ", "ga.json", [])]
+
+
+@pytest.fixture(scope="session")
+def compilers_dict():
+    Compiler.available_syscode = 1
+    return {"a": Compiler("a", "a", "independent", " ", " ", []),
+            "ba": Compiler("ba", "ba", "independent", "/ba/ba/", " ", []),
+            "c": Compiler("c", "c", "angle", "angle/c/data", " ", []),
+            "d_x": Compiler("d_x", "d", "angle", "angle/c/data", "c.json", []),
+            "e": Compiler("e", "e", "independent", "en/", "end.json", ["WHATEVER=\"indep\"", "X=\"y\""]),
+            "f": Compiler("f", "f", "angle", "en/", " ", ["WHATEVER=\"ang\"", "X=\"z\""]),
+            "g": Compiler("g", "g", "angle", " ", "ga.json", [])}

@@ -22,9 +22,10 @@ import sys
 import time
 from datetime import timedelta
 
-import create_shell_test, splitter_merger
-from scripts.utils.execution_utils import env_setup
-from scripts.utils.file_utils import find_buffer_file, clean_files, find_test_file
+import create_shell_test
+import splitter_merger
+from utils.execution_utils import env_setup
+from utils.file_utils import find_buffer_file, clean_files, find_test_file
 
 
 def main():
@@ -56,7 +57,7 @@ def main():
                     files_to_reduce.remove(file.split("_")[0] + shader_tool.file_extension)
 
         batch_reduction(reducer, compilers_dict, exec_dirs, files_to_reduce, shader_tool, ns.ref, ns.timeout,
-                        double_run=ns.double_run,  instrumentation=ns.instru)
+                        double_run=ns.double_run, instrumentation=ns.instru)
     else:
         run_reduction(reducer, compilers_dict, exec_dirs, ns.test_file, ns.output_file, shader_tool, ns.ref, ns.timeout,
                       double_run=ns.double_run, instrumentation=ns.instru)
@@ -70,7 +71,8 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool,
         print("Reduction of " + exec_dirs.keptshaderdir + file)
         shutil.copy(exec_dirs.keptshaderdir + file, "original_test" + shader_tool.file_extension)
         # run reduction
-        run_reduction(reducer, compilers, exec_dirs, "original_test" + shader_tool.file_extension, "test_reduced" + shader_tool.file_extension, shader_tool,
+        run_reduction(reducer, compilers, exec_dirs, "original_test" + shader_tool.file_extension,
+                      "test_reduced" + shader_tool.file_extension, shader_tool,
                       ref, reduce_timeout, log_file=reducer.name + "_" + file_radix + ".log", double_run=double_run,
                       instrumentation=instrumentation)
 
@@ -94,7 +96,8 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
     if instrumentation and instrumentation_filename == "":
         instrumentation_filename = reducer.name + "_" + test_input + ".log"
 
-    error_code_str = create_shell_test.build_shell_test(compilers, exec_dirs, shader_tool, "temp" + shader_tool.file_extension,
+    error_code_str = create_shell_test.build_shell_test(compilers, exec_dirs, shader_tool,
+                                                        "temp" + shader_tool.file_extension,
                                                         reducer.input_file, ref, reducer.interesting_test,
                                                         double_run=double_run, instrumentation=instrumentation_filename)
     error_code = int(error_code_str[:4])
@@ -131,7 +134,7 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
                 f.close()
         else:
             print("Reduction failed for shader")
-            #common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
+            # common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
     elif error_code >= 2000:
         print("Skipping test-case reduction for timeout shader")
         clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
@@ -141,7 +144,8 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
 
     # Cleans the current repository
     clean_files(os.getcwd(),
-                       ["temp" + shader_tool.file_extension, reducer.input_file, reducer.output_files, reducer.interesting_test])
+                ["temp" + shader_tool.file_extension, reducer.input_file, reducer.output_files,
+                 reducer.interesting_test])
     residues = find_test_file(os.getcwd())
     if test_output in residues:
         residues.remove(test_output)

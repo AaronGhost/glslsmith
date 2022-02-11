@@ -19,11 +19,34 @@ import subprocess
 import sys
 from subprocess import run
 
-from scripts.utils.Compiler import Compiler
-from scripts.utils.DirSettings import DirSettings
-from scripts.utils.Reducer import Reducer
-from scripts.utils.ShaderTool import ShaderTool
-from scripts.utils.file_utils import find_buffer_file, clean_files, concatenate_files
+from utils.Compiler import Compiler
+from utils.DirSettings import DirSettings
+from utils.Reducer import Reducer
+from utils.ShaderTool import ShaderTool
+from utils.file_utils import find_buffer_file, clean_files, concatenate_files
+
+
+def build_compiler_dict(compilers, restrict_compilers):
+    if restrict_compilers:
+        return {compiler.name: compiler for compiler in compilers if compiler.name in restrict_compilers}
+    else:
+        return {compiler.name: compiler for compiler in compilers}
+
+
+def select_reducer(reducers, reducer_name):
+    if len(reducers) == 0:
+        exit("No reducer has been declared at installation, please edit the configuration file")
+    ans = next((x for x in reducers if x.name == reducer_name), reducers[0])
+    if reducer_name != "" and ans.name != reducer_name:
+        exit("Reducer " + reducer_name + " not found")
+    return ans
+
+
+def select_shader_tool(shader_tools, tool_name):
+    ans = next((x for x in shader_tools if x.name == tool_name), shader_tools[0])
+    if tool_name != "" and ans.name != tool_name:
+        exit(tool_name + " not found")
+    return ans
 
 
 def env_setup(parser):
@@ -39,35 +62,15 @@ def env_setup(parser):
 
     # Parse the compiler config to a compiler dictionary
     compilers = Compiler.load_compilers_settings(ns.config)
-    compilers_dict = {}
-    for compiler in compilers:
-        if not hasattr(ns, "restrict_compilers") or not ns.restrict_compilers or compiler in ns.restrict_compilers:
-            compilers_dict[compiler.name] = compiler
+    compilers_dict = build_compiler_dict(compilers, ns.restrict_compilers if hasattr(ns, "restrict_compilers") else [])
 
     # Parse available reducers
     reducers = Reducer.load_reducers_settings(ns.config)
-    if len(reducers) == 0:
-        exit("No reducer has been declared at installation, please rerun installation or edit the configuration file")
-    reducer = reducers[0]
-    if hasattr(ns, "reducer") and ns.reducer != "":
-        reducer_found = False
-        for existing_reducer in reducers:
-            if existing_reducer.name == ns.reducer:
-                reducer = existing_reducer
-                reducer_found = True
-        if not reducer_found:
-            exit("No reducer named " + str(ns.reducer) + " configured")
+    reducer = select_reducer(reducers, ns.reducer if hasattr(ns, "reducer") else "")
 
     # Parse host language configuration
     shader_tools = ShaderTool.load_shader_tools(ns.config)
-    shader_tool = shader_tools[0]
-    shader_tool_found = False
-    for possible_tool in shader_tools:
-        if possible_tool.name == ns.host:
-            shader_tool_found = True
-            shader_tool = possible_tool
-    if not shader_tool_found:
-        print("Host tool not configured / recognized defaulting to: " + shader_tool.name)
+    shader_tool = select_shader_tool(shader_tools, ns.host)
 
     # Ensure that values are taken from the root
     os.chdir(exec_dirs.execdir)

@@ -24,6 +24,12 @@ class DirSettings:
         self.keptbufferdir = keptbufferdir
         self.keptshaderdir = keptshaderdir
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        else:
+            return False
+
     @staticmethod
     def load_dir_settings(filename):
         xmldoc = minidom.parse(filename)

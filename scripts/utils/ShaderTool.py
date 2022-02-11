@@ -24,6 +24,12 @@ class ShaderTool:
     def __str__(self):  # pragma: no cover
         return self.name
 
+    def __eq__(self, other):  # pragma : no cover
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        else:
+            return False
+
     @staticmethod
     def load_shader_tools(filename):
         xmldoc = minidom.parse(filename)

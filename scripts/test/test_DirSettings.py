@@ -14,6 +14,15 @@
 from scripts.utils.DirSettings import DirSettings
 
 
+def test_eq():
+    first_settings = DirSettings("graphicsfuzz", "./", "shaderoutput/", "dumpbuffer", "keptbuffer", "keptshader/")
+    second_settings = DirSettings("graphicsfuzz", "./", "shaderoutput/", "dumpbuffer", "keptbuffer", "keptshader/")
+    assert (first_settings == second_settings) is True
+    second_settings.execdir = "graph/"
+    assert (first_settings == second_settings) is False
+    assert (first_settings == "graph") is False
+
+
 def test_load_dir_settings():
     dir_settings = DirSettings.load_dir_settings("testdata/xml_files/dirsettings.xml")
     assert dir_settings.graphicsfuzz == "/graphicsfuzz/python/drivers/"

@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import argparse
 import os
 import sys
 
-from scripts.utils.analysis_utils import comparison_helper, attribute_compiler_results
-from scripts.utils.execution_utils import execute_compilation, env_setup
-from scripts.utils.file_utils import clean_files, find_buffer_file
+from utils.analysis_utils import comparison_helper, attribute_compiler_results
+from utils.execution_utils import execute_compilation, env_setup
+from utils.file_utils import clean_files, find_buffer_file
 
 
 def clean_and_exit(exit_message, clean_dir):

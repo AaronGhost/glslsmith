@@ -14,6 +14,15 @@
 from scripts.utils.Reducer import Reducer
 
 
+def test_eq():
+    first_reducer = Reducer("reducer", "reducer --input x", "interesting.sh", "shader.glsl", "shader2.glsl", [])
+    second_reducer = Reducer("reducer", "reducer --input x", "interesting.sh", "shader.glsl", "shader2.glsl", [])
+    assert (first_reducer == second_reducer) is True
+    second_reducer.name = "new"
+    assert (first_reducer == second_reducer) is False
+    assert (first_reducer == "reducer") is False
+
+
 def test_load_reducers_settings():
     reducers = Reducer.load_reducers_settings("testdata/xml_files/reducers.xml")
     # First reducer (picire)

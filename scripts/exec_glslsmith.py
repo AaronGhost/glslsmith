@@ -19,9 +19,9 @@ from subprocess import run
 
 import automate_reducer
 import splitter_merger
-from scripts.utils.analysis_utils import comparison_helper
-from scripts.utils.execution_utils import execute_compilation, env_setup
-from scripts.utils.file_utils import find_buffer_file, clean_files
+from utils.analysis_utils import comparison_helper
+from utils.execution_utils import execute_compilation, env_setup
+from utils.file_utils import find_buffer_file, clean_files
 
 
 def main():
@@ -77,10 +77,8 @@ def main():
         if not ns.diffonly:
             if not ns.nogeneration:
                 # generate programs and seed reporting
-                cmd = ["mvn", "-f", exec_dirs.graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e"
-                    , "exec:java", "-Dexec.mainClass=com.graphicsfuzz.GeneratorHandler"]
-
-                args = r'-Dexec.args=--shader-count ' + str(
+                cmd = [exec_dirs.graphicsfuzz + "glslsmith-generator"]
+                args = r'--shader-count ' + str(
                     ns.shadercount) + r' --output-directory ' + exec_dirs.shaderoutput
                 if ns.seed != -1:
                     args += r' --seed ' + str(ns.seed)
@@ -93,6 +91,7 @@ def main():
                     print("error with glslsmith generator, please fix them before running the script again")
                     print(process_return.stdout)
                     return
+                print(process_return.stdout)
                 for line in process_return.stdout.split("\n"):
                     if "Seed:" in line:
                         print(line)
@@ -111,10 +110,8 @@ def main():
                             shutil.move(exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
                                         exec_dirs.shaderoutput + "test_" + str(seed + i) + shader_tool.file_extension)
                             # Post process the shader
-                            cmd = ["mvn", "-f", exec_dirs.graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e",
-                                   "exec:java",
-                                   "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler"]
-                            args = r'-Dexec.args=--src ' + str(definitive_path) + r' --dest ' + reconditioned_path
+                            cmd = [exec_dirs.graphicsfuzz + "glslsmith-recondition"]
+                            args = r'--src ' + str(definitive_path) + r' --dest ' + reconditioned_path
                             cmd += [args]
                             process_return = run(cmd, capture_output=True, text=True)
                             if "SUCCESS!" not in process_return.stdout:
@@ -179,9 +176,9 @@ def main():
             # Execute program compilation on each compiler and save the results for the batch
             for i in range(ns.shadercount):
                 execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, shader_tool,
-                                           exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
-                                           str(i), exec_dirs.dumpbufferdir, verbose=ns.verbose,
-                                           double_run=ns.double_run, postprocessing=True)
+                                    exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
+                                    str(i), exec_dirs.dumpbufferdir, verbose=ns.verbose,
+                                    double_run=ns.double_run, postprocessing=True)
         # Compare outputs and save buffers
         # Check that we can compare outputs across multiple compilers
         if len(compilers_dict) == 1:

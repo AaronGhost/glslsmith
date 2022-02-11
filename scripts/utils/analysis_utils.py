@@ -14,7 +14,7 @@
 
 import hashlib
 
-from scripts.utils.file_utils import get_compiler_name
+from utils.file_utils import get_compiler_name
 
 
 def comparison_helper(files):

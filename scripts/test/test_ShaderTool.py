@@ -14,6 +14,15 @@
 from scripts.utils.ShaderTool import ShaderTool
 
 
+def test_eq():
+    first_shadertool = ShaderTool("shadertool", "shadertool/shadertool", ".shader")
+    second_shadertool = ShaderTool("shadertool", "shadertool/shadertool", ".shader")
+    assert (first_shadertool == second_shadertool) is True
+    second_shadertool.name = "tool"
+    assert (first_shadertool == second_shadertool) is False
+    assert (first_shadertool == "shadertool") is False
+
+
 def test_load_shader_tools():
     shader_tools = ShaderTool.load_shader_tools("testdata/xml_files/shadertools.xml")
     # Test first shader tool (Shadertrap)
