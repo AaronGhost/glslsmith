@@ -16,7 +16,7 @@ import argparse
 import re
 from subprocess import run
 
-from scripts.utils.execution_utils import env_setup
+from scripts.utils.execution_utils import env_setup, collect_process_return
 from scripts.utils.file_utils import clean_files
 from splitter_merger import split
 
@@ -55,10 +55,8 @@ def stats_shader(graphicsfuzz, shader_tool, shader, harness_file):
     # Post-process the shader
     # TODO reformat this with a post-processing function call
     cmd = [graphicsfuzz + "glslsmith-recondition", "--src", str(shader), "--dest", harness_file]
-    process_return = run(cmd, capture_output=True, text=True)
-    if "SUCCESS!" not in process_return.stdout:
-        print(process_return.stderr)
-        print(process_return.stdout)
+    check_passed, message = collect_process_return(run(cmd, capture_output=True, text=True), "SUCCESS!")
+    if not check_passed:
         print(shader + " cannot be parsed for post-processing")
         exit(1)
 

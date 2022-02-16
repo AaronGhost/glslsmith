@@ -17,7 +17,6 @@ import re
 import shutil
 import subprocess
 import sys
-from subprocess import run
 
 from utils.Compiler import Compiler
 from utils.DirSettings import DirSettings
@@ -83,86 +82,95 @@ def find_amber_buffers(shader_to_compile):
         return re.findall(r"BUFFER (.+) AS storage DESCRIPTOR_SET (.*) BINDING (.*)", f.read())
 
 
+def prepare_amber_command(amber_tool_path, output_file, shader_name, add_id):
+    amber_command = amber_tool_path + " -d -b " + output_file
+    if add_id:
+        _, descriptor_set, binding = find_amber_buffers(shader_name)[0]
+        return amber_command + " -B " + binding + " " + shader_name
+    else:
+        for _, descriptor_set, binding in find_amber_buffers(shader_name):
+            amber_command += " -B " + binding
+        return amber_command + " " + shader_name
+
+
+def prepare_shadertrap_command(shader_tool_path, renderer, shader_name):
+    return shader_tool_path + " --require-vendor-renderer-substring " + renderer + " " + shader_name
+
+
+def collect_process_return(process_return, check_value):
+    message = process_return.stdout + process_return.stderr
+    if check_value not in message:
+        print(message)
+        return False, message
+    return True, message
+
+
 def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, verbose=False):
     try:
+        # Push the shader file to android
         if compiler.type == "android":
-            run(["adb", "push", shader_to_compile, "/data/local/tmp/test" + shader_tool.file_extension],
-                capture_output=True, text=True)
-            # The Android ShaderTrap binary is assumed to be present at /data/local/tmp
-            if shader_tool.name == "amber":
-                amber_command = "./amber -d"
-                for buffer_name, descriptor_set, binding in find_amber_buffers(shader_to_compile):
-                    amber_command += " -b " + buffer_name + " -B " + binding
-                amber_command += " test.amber"
-                process_return = run(["adb", "shell", "cd /data/local/tmp && " + amber_command], capture_output=True,
-                                     text=True,
-                                     timeout=timeout)
-            else:
-                process_return = run(["adb", "shell",
-                                      "cd /data/local/tmp && ./shadertrap --require-vendor-renderer-substring "
-                                      + compiler.renderer + " test.shadertrap"], capture_output=True, text=True,
-                                     timeout=timeout)
-            if run_type == "add_id":
-                run(["adb", "pull", "ids.txt"], capture_output=True, text=True)
-                run(["adb", "shell", "rm", "/data/local/tmp/buffer_*"], capture_output=True, text=True)
-            else:
-                ls_return = run(["adb", "shell", "ls", "/data/local/tmp/buffer_*"], capture_output=True, text=True)
-                for buffer_file in ls_return.stdout.split():
-                    run(["adb", "pull", buffer_file], capture_output=True, text=True)
-                run(["adb", "shell", "rm", "/data/local/tmp/buffer_*"], capture_output=True, text=True)
-                run(["adb", "shell", "rm", "/data/local/tmp/test" + shader_tool.file_extension], capture_output=True,
-                    text=True)
+            subprocess.run(["adb", "push", shader_to_compile, "/data/local/tmp/" + shader_to_compile],
+                           capture_output=True, text=True)
+
+        # Construct the tool path
+        if compiler.type == "android":
+            tool_path = "./" + shader_tool.path.split("/")[-1]
         else:
-            # Execute the correct cmd command
-            if shader_tool.name == "amber":
-                # TODO only the last buffer_name is effectively dumped (contain multiple binding) => b token useless
-                cmd_ending = [shader_tool.path, "-d"]
+            tool_path = shader_tool.path
 
-                if run_type == "add_id":
-                    buffer, descriptor_set, binding = find_amber_buffers(shader_to_compile)[0]
-                    cmd_ending += ["-b", "buffer_ids.txt", "-B", binding]
-                else:
-                    for buffer_name, descriptor_set, binding in find_amber_buffers(shader_to_compile):
-                        cmd_ending += ["-b", buffer_name, "-B", binding]
-                cmd_ending.append(shader_to_compile)
+        # Prepare the command depending on the tool path
+        if shader_tool.name == "amber":
+            cmd_ending = prepare_amber_command(tool_path, "buffer_result.txt", shader_to_compile, run_type == "add_id")
+        else:
+            cmd_ending = prepare_shadertrap_command(tool_path, compiler.renderer, shader_to_compile)
 
-            else:
-                cmd_ending = [shader_tool.path, "--require-vendor-renderer-substring", compiler.renderer,
-                              shader_to_compile]
-            cmd = compiler.build_exec_env() + cmd_ending
+        # Execute the command
+        if compiler.type == "android":
+            process_return = subprocess.run(["adb", "shell", "cd /data/local/tmp && " + cmd_ending],
+                                            capture_output=True, text=True, timeout=timeout)
             if verbose:
-                print("Shadertrap command: " + " ".join(cmd))
-            process_return = run(cmd, capture_output=True, text=True, timeout=timeout)
-            if run_type == "add_id":
-                if os.path.isfile("buffer_ids.txt"):
-                    shutil.move("buffer_ids.txt", "ids.txt")
-                    buffer_files = find_buffer_file(os.getcwd())
-                    clean_files(os.getcwd(), buffer_files)
-                else:
-                    open("ids.txt", 'a').close()
+                print("adb shell cd /data/local/tmp && " + cmd_ending)
+        else:
+            process_return = subprocess.run(compiler.build_exec_env() + cmd_ending.split(), capture_output=True,
+                                            text=True, timeout=timeout)
+            if verbose:
+                print(" ".join(compiler.build_exec_env()) + cmd_ending)
 
-    # Catch timeouts (post-processed shaders should not contain any)
+        # Collect the result
+        if compiler.type == "android":
+            # Pull all buffers from android
+            ls_return = subprocess.run(["adb", "shell", "ls", "/data/local/tmp/buffer_*"], capture_output=True,
+                                       text=True)
+            for buffer_file in ls_return.stdout.split():
+                subprocess.run(["adb", "pull", buffer_file], capture_output=True, text=True)
+            # If we are only interested in the ids
+        elif run_type == "add_id":
+            if os.path.isfile("buffer_result.txt"):
+                shutil.move("buffer_result.txt", "ids.txt")
+            elif os.path.isfile("buffer.ids.txt"):
+                shutil.move("buffer_ids.txt", "ids.txt")
+            else:
+                open("ids.txt", 'a').close()
+
+        # Clean in the case of android
+        if compiler.type == "android":
+            subprocess.run(["adb", "shell", "rm", "/data/local/tmp/buffer_*", "/data/local/tmp/" + shader_to_compile],
+                           capture_output=True, text=True)
+
+    # Timeout case
     except subprocess.TimeoutExpired:
         return False, True, "timeout"
-    # Detect error at compilation time
-    if (shader_tool.name == "shadertrap" and 'SUCCESS!' not in process_return.stderr) or \
-            (shader_tool.name == "amber" and "1 pass" not in process_return.stdout):
-        message = ""
-        # Output compilation error messages
-        if process_return.stdout != "":
-            print(process_return.stdout)
-            message += process_return.stdout
-        if process_return.stderr != "":
-            print(process_return.stderr)
-            message += process_return.stderr
-        return True, False, message
 
-    return False, False, "no_crash"
+    # Detect error at compilation time
+    if shader_tool.name == "amber":
+        check_not_passed, message = collect_process_return(process_return, "1 pass")
+    else:
+        check_not_passed, message = collect_process_return(process_return, "SUCCESS!")
+    return False, not check_not_passed, message if check_not_passed else "no_crash"
 
 
 def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, output_seed="", move_dir="./",
-                        verbose=False,
-                        timeout=10, double_run=False, postprocessing=True):
+                        verbose=False, timeout=10, double_run=False, postprocessing=True):
     no_compile_errors = []
     # Verify that the file exists
     if not os.path.isfile(shadername):
@@ -181,7 +189,7 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
         cmd += [args]
         if verbose:
             print("Reconditioning command: " + " ".join(cmd))
-        process_return = run(cmd, capture_output=True, text=True)
+        process_return = subprocess.run(cmd, capture_output=True, text=True)
         # print(process_return.stderr)
         # print(process_return.stdout)
         if "SUCCESS!" not in process_return.stdout:
@@ -215,7 +223,7 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
                 cmd += [args]
                 if verbose:
                     print("Reconditioning command: " + " ".join(cmd))
-                process_return = run(cmd, capture_output=True, text=True)
+                process_return = subprocess.run(cmd, capture_output=True, text=True)
                 # print(process_return.stderr)
                 # print(process_return.stdout)
                 if "SUCCESS!" not in process_return.stdout:

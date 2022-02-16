@@ -55,3 +55,10 @@ class TestStatsShader:
         outputs = capsys.readouterr()
         assert outputs.out == output_text
         assert len(os.listdir(tmpdir)) == 1
+
+    def test_stats_shader_missing_buffer(self, conf):
+        with pytest.raises(SystemExit) as e:
+            stats_shader(conf["exec_dirs"].graphicsfuzz, conf["shadertools"][0], "testdata/shader.glsl",
+                         "testdata/shader.shadertrap")
+            assert e.type == SystemExit
+            assert isinstance(e.value.code, str)
