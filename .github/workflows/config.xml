@@ -29,7 +29,7 @@
 	<shadertools>
 		<shadertool>
 			<name>shadertrap</name>
-			<path>home/runner/shadertrap/bin/shadertrap</path>
+			<path>/home/runner/shadertrap/bin/shadertrap</path>
 			<extension>.shadertrap</extension>
 		</shadertool>
 	</shadertools>

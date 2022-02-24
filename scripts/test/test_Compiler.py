@@ -29,21 +29,21 @@ def test_eq(compilers_dict):
 
 @pytest.mark.parametrize("name, env",
                          [("a", []),
-                          ("ba", ["export", "LD_LIBRARY_PATH=/ba/ba/:$LD_LIBRARY_PATH"]),
-                          ("c", ["export", "LD_LIBRARY_PATH=angle/c/data:$LD_LIBRARY_PATH",
+                          ("ba", ["env", "LD_LIBRARY_PATH=/ba/ba/:$LD_LIBRARY_PATH"]),
+                          ("c", ["env", "LD_LIBRARY_PATH=angle/c/data:$LD_LIBRARY_PATH",
                                  "ANGLE_DEFAULT_PLATFORM=vulkan"]),
                           ("d_x",
-                           ["export", "LD_LIBRARY_PATH=angle/c/data:$LD_LIBRARY_PATH", "ANGLE_DEFAULT_PLATFORM=vulkan",
+                           ["env", "LD_LIBRARY_PATH=angle/c/data:$LD_LIBRARY_PATH", "ANGLE_DEFAULT_PLATFORM=vulkan",
                             "VK_ICD_FILENAMES=c.json"]),
                           ("e",
-                           ["export", "LD_LIBRARY_PATH=en/:$LD_LIBRARY_PATH", "VK_ICD_FILENAMES=end.json",
+                           ["env", "LD_LIBRARY_PATH=en/:$LD_LIBRARY_PATH", "VK_ICD_FILENAMES=end.json",
                             "WHATEVER=\"indep\"",
                             "X=\"y\""]),
                           ("f",
-                           ["export", "LD_LIBRARY_PATH=en/:$LD_LIBRARY_PATH", "ANGLE_DEFAULT_PLATFORM=vulkan",
+                           ["env", "LD_LIBRARY_PATH=en/:$LD_LIBRARY_PATH", "ANGLE_DEFAULT_PLATFORM=vulkan",
                             "WHATEVER=\"ang\"",
                             "X=\"z\""]),
-                          ("g", ["export", "ANGLE_DEFAULT_PLATFORM=vulkan", "VK_ICD_FILENAMES=ga.json"])])
+                          ("g", ["env", "ANGLE_DEFAULT_PLATFORM=vulkan", "VK_ICD_FILENAMES=ga.json"])])
 def test_build_exec_env(compilers_dict, name, env):
     exec_res = compilers_dict[name].build_exec_env()
     assert exec_res == env
