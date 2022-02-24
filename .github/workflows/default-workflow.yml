@@ -76,6 +76,12 @@ jobs:
           mkdir ~/llvmpipe && cd ~/llvmpipe && $GITHUB_WORKSPACE/.github/workflows/setup_llvmpipe.sh
 
       # Swiftshader
+      - name: Install Vulkan SDK
+        uses: humbletim/install-vulkan-sdk@v1
+        with:
+          version: latest
+          cache: true
+      
       - name: Install Swiftshader
         run: |
           mkdir ~/angle && cd ~/angle && curl -fsSL -o angle.zip https://github.com/google/gfbuild-angle/releases/download/github%2Fgoogle%2Fgfbuild-angle%2F96ab6566490495f472cd239997701b201c7a48ac/gfbuild-angle-96ab6566490495f472cd239997701b201c7a48ac-Linux_x64_Debug.zip && unzip angle.zip
