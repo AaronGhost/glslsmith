@@ -39,9 +39,9 @@ class Compiler:
     def build_exec_env(self):
         cmd_env = []
         if self.ldpath != " " or self.otherenvs != [] or self.type == "angle" or self.vkfilename != " ":
-            cmd_env.append("env")
+            cmd_env.append("export")
             if self.ldpath != " ":
-                cmd_env.append("LD_LIBRARY_PATH=" + self.ldpath)
+                cmd_env.append("LD_LIBRARY_PATH=" + self.ldpath + ":$LD_LIBRARY_PATH")
             if self.type == "angle":
                 cmd_env.append("ANGLE_DEFAULT_PLATFORM=vulkan")
             if self.vkfilename != " ":
