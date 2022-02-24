@@ -98,7 +98,7 @@ jobs:
       
       # List files in directory
       - name: List files in home
-        run: ls ~
+        run: ls -alh ~/shadertrap/bin
 
 
       # Tests 
