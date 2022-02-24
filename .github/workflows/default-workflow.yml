@@ -95,6 +95,12 @@ jobs:
         run: |
           mkdir ~/amber && cd ~/amber && curl -fsSL -o amber.zip https://github.com/google/gfbuild-amber/releases/download/github%2Fgoogle%2Fgfbuild-amber%2F0c514a34280aaf303f6b625b0285513be8cf2d8e/gfbuild-amber-0c514a34280aaf303f6b625b0285513be8cf2d8e-Linux_x64_Debug.zip && unzip amber.zip
 
+      
+      # List files in directory
+      - name: List files in home
+        run: ls ~
+
+
       # Tests 
       - name: Tests with pytest
         run: |
