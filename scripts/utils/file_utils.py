@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import re
 
 
 def concatenate_files(outputname, files):
@@ -34,15 +35,20 @@ def clean_files(current_dir, files_list):
     os.chdir(ref)
 
 
-def find_file(current_dir, prefix=""):
+def find_file(current_dir, regex_pattern=""):
+    regex = re.compile(regex_pattern)
     file_list = os.listdir(current_dir)
     buffer_files = []
     if current_dir[-1] != "/":
         current_dir += "/"
     for file in file_list:
-        if os.path.isfile(current_dir + file) and prefix in file:
+        if os.path.isfile(current_dir + file) and regex.match(file):
             buffer_files.append(file)
     return buffer_files
+
+
+def find_digit_buffer_file(current_dir):
+    return find_file(current_dir, "buffer_[0-9]+")
 
 
 def find_buffer_file(current_dir):  # pragma: no cover
@@ -59,3 +65,11 @@ def get_compiler_name(buffer_name):
 
 def get_seed(buffer_name):
     return buffer_name.split("/")[-1].rsplit("_", 1)[1].split(".")[0]
+
+
+def ensure_abs_path(root_dir, test_dir):
+    # Return test_dir if absolute or an absolute path using the root_dir
+    if os.path.isabs(test_dir):
+        return test_dir
+    else:
+        return os.path.normpath(os.path.join(root_dir, test_dir)) + "/"

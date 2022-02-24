@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 import argparse
+import os
+import shutil
 import sys
 
 import pytest
@@ -20,7 +22,7 @@ from scripts.utils import execution_utils
 from scripts.utils.Reducer import Reducer
 from scripts.utils.ShaderTool import ShaderTool
 from scripts.utils.execution_utils import select_reducer, select_shader_tool, env_setup, find_amber_buffers, \
-    prepare_amber_command, prepare_shadertrap_command, collect_process_return
+    prepare_amber_command, prepare_shadertrap_command, collect_process_return, single_compile
 
 
 def test_build_compiler_dict(compilers_list, compilers_dict):
@@ -71,17 +73,17 @@ def test_env_setup():
 
 
 # TODO fix this with real Amber examples
-@pytest.mark.parametrize("filename, result", [("shader_1.amber", [("buffer_ids", "0", "0"), ("buffer_0", "0", "1"),
-                                                                  ("buffer_1", "0", "2"), ("buffer_2", "0", "3")]),
-                                              ("shader_2.amber", [("buffer_0", "0", "0"), ("buffer_1", "0", "1"),
-                                                                  ("buffer_2", "0", "2"), ("buffer_3", "0", "3"),
-                                                                  ("buffer_4", "0", "4")])])
+@pytest.mark.parametrize("filename, result", [("shader_1.amber", [("buffer_0", "0", "0")]),
+                                              ("shader_2.amber", [("buffer_ids", "0", "0"), ("buffer_0", "0", "1"),
+                                                                  ("buffer_1", "0", "2"), ("buffer_2", "0", "3"),
+                                                                  ("buffer_3", "0", "4")])])
 def test_find_amber_buffers(filename, result):
     assert find_amber_buffers("testdata/amber_shaders/" + filename) == result
 
 
 @pytest.mark.parametrize("shader_name, add_id, result", [
-    ("shader_1.amber", True, "./amber -d -b buffer_output.txt -B 0 testdata/amber_shaders/shader_1.amber"),
+    ("shader_1.amber", False, "./amber -d -b buffer_output.txt -B 0 testdata/amber_shaders/shader_1.amber"),
+    ("shader_2.amber", True, "./amber -d -b buffer_output.txt -B 0 testdata/amber_shaders/shader_2.amber"),
     ("shader_2.amber", False,
      "./amber -d -b buffer_output.txt -B 0 -B 1 -B 2 -B 3 -B 4 testdata/amber_shaders/shader_2.amber")])
 def test_prepare_amber_command(shader_name, add_id, result):
@@ -90,10 +92,9 @@ def test_prepare_amber_command(shader_name, add_id, result):
 
 
 def test_prepare_shadertrap_command():
-    assert prepare_shadertrap_command("shadertrap/shadertrap", "banana",
-                                      "test.shadertrap") == "shadertrap/shadertrap " \
-                                                            "--require-vendor-renderer-substring banana " \
-                                                            "test.shadertrap"
+    assert prepare_shadertrap_command("shadertrap/shadertrap", "banana caramel",
+                                      "test.shadertrap") == "shadertrap/shadertrap test.shadertrap " \
+                                                            "--require-vendor-renderer-substring \"banana caramel\""
 
 
 def test_collect_process_return():
@@ -107,3 +108,82 @@ def test_collect_process_return():
     assert collect_process_return(process_return_1, "passed") == (False, "Every path leads to SUCCESS!")
     process_return_2 = Outputs("whatever", "1 passed")
     assert collect_process_return(process_return_2, "passed") == (True, "whatever1 passed")
+
+
+@pytest.fixture()
+def return_to_script():
+    script_location = os.getcwd()
+    yield
+    os.chdir(script_location)
+
+
+def test_single_compile(tmpdir, conf, return_to_script, capsys):
+    script_location = os.getcwd()
+    tmpdir_counter = 0
+    for shader_tool in conf["shadertools"]:
+        for compiler in conf["compilers"]:
+            for run_type in ["normal", "add_id"]:
+                # Test normal
+                buffer_path = tmpdir.join("d" + str(tmpdir_counter))
+                tmpdir_counter += 1
+                buffer_path.mkdir()
+                normal_file = str(buffer_path) + "/shader_1" + shader_tool.file_extension
+                shutil.copy(
+                    script_location + "/testdata/" + shader_tool.name + "_shaders/shader_1" + shader_tool.file_extension,
+                    normal_file)
+                os.chdir(buffer_path)
+                crash, timeout, message = single_compile(compiler, normal_file, shader_tool, 1, run_type, False)
+                assert crash is False, "wrong value for " + compiler.name + " with " + shader_tool.name
+                assert timeout is False, "wrong value for " + compiler.name + " with " + shader_tool.name
+                assert message == "no_crash", "wrong value for " + compiler.name + " with " + shader_tool.name
+                if run_type == "add_id":
+                    assert os.path.isfile(
+                        buffer_path.join("ids.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
+                else:
+                    assert os.path.isfile(buffer_path.join(
+                        "buffer_result.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
+                    with open("buffer_result.txt", "r") as f:
+                        if shader_tool.name == "shadertrap":
+                            assert f.readlines() == [
+                                "1 1 1 1 1 1"], "wrong value for " + compiler.name + " with " + shader_tool.name
+                        else:
+                            assert f.readlines() == ['0\n', ' 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00\n',
+                                                     ' 01 00 00 00 01 00 00 00\n'], \
+                                "wrong value for " + compiler.name + " with " + shader_tool.name
+
+                # Test crash
+                crash_path = tmpdir.join("d" + str(tmpdir_counter))
+                tmpdir_counter += 1
+                crash_path.mkdir()
+                crash_file = str(crash_path) + "/crash" + shader_tool.file_extension
+                shutil.copy(
+                    script_location + "/testdata/" + shader_tool.name + "_shaders/crash" + shader_tool.file_extension,
+                    crash_file)
+                os.chdir(crash_path)
+                crash, timeout, message = single_compile(compiler, crash_file, shader_tool, 1, run_type, True)
+                assert crash is True, "wrong value for " + compiler.name + " with " + shader_tool.name
+                assert timeout is False, "wrong value for " + compiler.name + " with " + shader_tool.name
+                assert message != "no_crash", "wrong value for " + compiler.name + " with " + shader_tool.name
+                if run_type == "add_id":
+                    assert os.path.isfile(
+                        crash_path.join("ids.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
+
+                # Test  timeout (Mesa compilers do not seem to timeout)
+                if compiler.name != "llvmpipe" and compiler.name != "vulkan-intel":
+                    timeout_path = tmpdir.join("d" + str(tmpdir_counter))
+                    tmpdir_counter += 1
+                    timeout_path.mkdir()
+                    timeout_file = str(timeout_path) + "/timeout" + shader_tool.file_extension
+                    shutil.copy(
+                        script_location + "/testdata/" + shader_tool.name + "_shaders/timeout"
+                        + shader_tool.file_extension,
+                        timeout_file)
+                    os.chdir(timeout_path)
+                    crash, timeout, message = single_compile(compiler, timeout_file, shader_tool, 1, run_type, True)
+                    assert crash is False, "wrong value for " + compiler.name + " with " + shader_tool.name
+                    assert timeout is True, "wrong value for " + compiler.name + " with " + shader_tool.name
+                    assert message == "timeout", "wrong value for " + compiler.name + " with " + shader_tool.name
+                    if run_type == "add_id":
+                        assert os.path.isfile(timeout_path.join(
+                            "ids.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
+        capsys.readouterr()

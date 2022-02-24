@@ -10,8 +10,11 @@ layout(std430, binding = 0) buffer buffer_0 {
 
 void main()
 {
-  for(int i = 0; i < 6; i++){
-    ext_0[i] = 1u;
+  while(true) {
+  while(ext_0[0] != 4294901761u){
+   ext_0[0] += 1u;
+   ext_0[1] -= 1u;
+  }
   }
 }
 END

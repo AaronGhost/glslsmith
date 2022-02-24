@@ -15,7 +15,8 @@ import os.path
 
 import pytest
 
-from scripts.utils.file_utils import get_compiler_name, get_seed, concatenate_files, find_file, clean_files
+from scripts.utils.file_utils import get_compiler_name, get_seed, concatenate_files, find_file, clean_files, \
+    ensure_abs_path
 
 
 def test_concatenate_files(tmpdir):
@@ -45,8 +46,6 @@ def test_clean_dir(tmpdir):
     assert os.getcwd() != tmpdir
 
 
-
-
 def test_find_file(tmpdir):
     tmpdir.join("buffer_1.txt").write("1")
     tmpdir.join("buffer_2.txt").write("2")
@@ -74,3 +73,8 @@ def test_get_compiler_name(buffer_name, compiler_name):
                          [("whatever/nvidia_0.txt", "0"), ("vulkan_intel_522.txt", "522")])
 def test_get_seed(buffer_name, seed):
     assert get_seed(buffer_name) == seed
+
+
+def test_ensure_abs_path(tmpdir):
+    assert ensure_abs_path(tmpdir, os.getcwd()) == os.getcwd()
+    assert ensure_abs_path(tmpdir, "./execdir/") == str(tmpdir.join("execdir")) + "/"

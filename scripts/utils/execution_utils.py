@@ -17,12 +17,15 @@ import re
 import shutil
 import subprocess
 import sys
+import shlex
 
 from utils.Compiler import Compiler
 from utils.DirSettings import DirSettings
 from utils.Reducer import Reducer
 from utils.ShaderTool import ShaderTool
 from utils.file_utils import find_buffer_file, clean_files, concatenate_files
+
+from scripts.utils.file_utils import find_digit_buffer_file
 
 
 def build_compiler_dict(compilers, restrict_compilers):
@@ -94,7 +97,7 @@ def prepare_amber_command(amber_tool_path, output_file, shader_name, add_id):
 
 
 def prepare_shadertrap_command(shader_tool_path, renderer, shader_name):
-    return shader_tool_path + " --require-vendor-renderer-substring " + renderer + " " + shader_name
+    return shader_tool_path + " " + shader_name + " --require-vendor-renderer-substring \"" + renderer + "\""
 
 
 def collect_process_return(process_return, check_value):
@@ -111,9 +114,7 @@ def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, 
         if compiler.type == "android":
             subprocess.run(["adb", "push", shader_to_compile, "/data/local/tmp/" + shader_to_compile],
                            capture_output=True, text=True)
-
-        # Construct the tool path
-        if compiler.type == "android":
+            # Construct the tool path
             tool_path = "./" + shader_tool.path.split("/")[-1]
         else:
             tool_path = shader_tool.path
@@ -131,7 +132,7 @@ def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, 
             if verbose:
                 print("adb shell cd /data/local/tmp && " + cmd_ending)
         else:
-            process_return = subprocess.run(compiler.build_exec_env() + cmd_ending.split(), capture_output=True,
+            process_return = subprocess.run(compiler.build_exec_env() + shlex.split(cmd_ending), capture_output=True,
                                             text=True, timeout=timeout)
             if verbose:
                 print(" ".join(compiler.build_exec_env()) + cmd_ending)
@@ -147,7 +148,7 @@ def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, 
         elif run_type == "add_id":
             if os.path.isfile("buffer_result.txt"):
                 shutil.move("buffer_result.txt", "ids.txt")
-            elif os.path.isfile("buffer.ids.txt"):
+            elif os.path.isfile("buffer_ids.txt"):
                 shutil.move("buffer_ids.txt", "ids.txt")
             else:
                 open("ids.txt", 'a').close()
@@ -159,16 +160,23 @@ def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, 
 
     # Timeout case
     except subprocess.TimeoutExpired:
+        open("ids.txt", 'a').close()
         return False, True, "timeout"
 
     # Detect error at compilation time
     if shader_tool.name == "amber":
-        check_not_passed, message = collect_process_return(process_return, "1 pass")
+        check_passed, message = collect_process_return(process_return, "1 pass")
     else:
-        check_not_passed, message = collect_process_return(process_return, "SUCCESS!")
-    return False, not check_not_passed, message if check_not_passed else "no_crash"
+        check_passed, message = collect_process_return(process_return, "SUCCESS!")
+        if check_passed and run_type != "add_id":
+            buffer_files = find_digit_buffer_file(os.getcwd())
+            # Exclude combined files from concatenation and removal
+            concatenate_files("buffer_result.txt", buffer_files)
+    return not check_passed, False, message if not check_passed else "no_crash"
 
 
+# TODO in the case of double-run, run at least twice the system to check if the ids match
+#  (otherwise, in the case of defects, we might crash on the other compilers
 def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, output_seed="", move_dir="./",
                         verbose=False, timeout=10, double_run=False, postprocessing=True):
     no_compile_errors = []
