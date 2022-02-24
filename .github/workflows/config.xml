@@ -13,7 +13,7 @@
 			<name>llvmpipe</name>
 			<renderer>llvmpipe</renderer>
 			<type>independent</type>
-			<LD_LIBRARY_PATH>~/llvmpipe/install/</LD_LIBRARY_PATH>
+			<LD_LIBRARY_PATH>/home/runner/llvmpipe/install/</LD_LIBRARY_PATH>
 			<VK_ICD_FILENAMES> </VK_ICD_FILENAMES>
 			<otherenvs> </otherenvs>
 		</compiler>
@@ -21,15 +21,15 @@
 			<name>swiftshader</name>
 			<renderer>SwiftShader</renderer>
 			<type>angle</type>
-			<LD_LIBRARY_PATH>~/angle/lib/</LD_LIBRARY_PATH>
-			<VK_ICD_FILENAMES>~/angle/lib/vk_swiftshader_icd.json</VK_ICD_FILENAMES>
+			<LD_LIBRARY_PATH>/home/runner/angle/lib/</LD_LIBRARY_PATH>
+			<VK_ICD_FILENAMES>/home/runner/angle/lib/vk_swiftshader_icd.json</VK_ICD_FILENAMES>
 			<otherenvs> </otherenvs>
 		</compiler>
 	</compilers>
 	<shadertools>
 		<shadertool>
 			<name>shadertrap</name>
-			<path>~/shadertrap/bin/shadertrap</path>
+			<path>home/runner/shadertrap/bin/shadertrap</path>
 			<extension>.shadertrap</extension>
 		</shadertool>
 	</shadertools>
