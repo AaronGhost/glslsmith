@@ -169,7 +169,7 @@ def test_single_compile(tmpdir, conf, return_to_script, capsys):
                         crash_path.join("ids.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
 
                 # Test  timeout (Mesa compilers do not seem to timeout)
-                if compiler.name != "llvmpipe" and compiler.name != "vulkan-intel":
+                if compiler.name != "llvmpipe" and compiler.name != "vulkan-intel" and compiler.name != "lavapipe":
                     timeout_path = tmpdir.join("d" + str(tmpdir_counter))
                     tmpdir_counter += 1
                     timeout_path.mkdir()
