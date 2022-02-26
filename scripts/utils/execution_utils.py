@@ -55,7 +55,7 @@ def env_setup(parser):
     # Add the configuration file and the host parameters to all scripts
     parser.add_argument('--config-file', dest='config', default="config.xml",
                         help="specify a different configuration file from the default")
-    parser.add_argument('--host', dest='host', default="shadertrap",
+    parser.add_argument('--host', dest='host', default="",
                         help="Specify the host language in which to embed the shader code")
     ns = parser.parse_args(sys.argv[1:])
 
