@@ -110,10 +110,11 @@ jobs:
         run: |
           echo "LD_LIBRARY_PATH=$VULKAN_SDK/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
           echo "VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d" >> $GITHUB_ENV 
+          echo "VK_ICR_FILENAMES=/home/runner/llvmpipe/install/share/vulkan/icd.d/lvp_icd.x86_64.json" >> $GITHUB_ENV
 
       - name: Check Amber with valid shader
         run: |
-          env && env VK_ICD_FILENAMES=/home/runner/llvmpipe/install/share/vulkan/icd.d/lvp_icd.x86_64.json /home/runner/amber/bin/amber $GITHUB_WORKSPACE/scripts/testdata/amber_shaders/shader_1.amber
+          env VK_ICD_FILENAMES=/home/runner/llvmpipe/install/share/vulkan/icd.d/lvp_icd.x86_64.json /home/runner/amber/bin/amber $GITHUB_WORKSPACE/scripts/testdata/amber_shaders/shader_1.amber
 
       - name: Test with Amber back-end
         run: |
