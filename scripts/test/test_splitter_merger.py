@@ -68,7 +68,7 @@ def test_merge(tmpdir, tool):
 def test_main(tmpdir, conf):
     scripts_path = os.getcwd()
     with pytest.raises(SystemExit) as e:
-        sys.argv = ["splitter_merger.py"]
+        sys.argv = ["splitter_merger.py", "--config-file", conf["conf_path"]]
         main()
     assert e.type == SystemExit
     assert e.value.code == 1
