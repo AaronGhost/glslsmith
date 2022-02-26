@@ -108,6 +108,10 @@ jobs:
           env LD_LIBRARY_PATH=/home/runner/llvmpipe/install/:LD_LIBRARY_PATH /home/runner/shadertrap/bin/shadertrap scripts/testdata/shadertrap_shaders/shader_1.shadertrap
       
       # Check if we can run Amber
+      - name: Inspect Vulkan
+        run : |
+          ls $VULKAN_SDK/etc/vulkan/icd.d
+      
       - name: Test amber
         run: |
           env VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d LD_LIBRARY_PATH=$VULKAN_SDK/lib:$LD_LIBRARY_PATH /home/runner/amber/bin/amber scripts/testdata/amber_shaders/shader_1.amber
