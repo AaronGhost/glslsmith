@@ -132,7 +132,7 @@ def test_single_compile(tmpdir, conf, return_to_script, capsys):
                     script_location + "/testdata/" + shader_tool.name + "_shaders/shader_1" + shader_tool.file_extension,
                     normal_file)
                 os.chdir(buffer_path)
-                crash, timeout, message = single_compile(compiler, normal_file, shader_tool, 1, run_type, False)
+                crash, timeout, message = single_compile(compiler, normal_file, shader_tool, 5, run_type, False)
                 assert crash is False, "wrong value for " + compiler.name + " with " + shader_tool.name
                 assert timeout is False, "wrong value for " + compiler.name + " with " + shader_tool.name
                 assert message == "no_crash", "wrong value for " + compiler.name + " with " + shader_tool.name
@@ -160,7 +160,7 @@ def test_single_compile(tmpdir, conf, return_to_script, capsys):
                     script_location + "/testdata/" + shader_tool.name + "_shaders/crash" + shader_tool.file_extension,
                     crash_file)
                 os.chdir(crash_path)
-                crash, timeout, message = single_compile(compiler, crash_file, shader_tool, 1, run_type, True)
+                crash, timeout, message = single_compile(compiler, crash_file, shader_tool, 3, run_type, True)
                 assert crash is True, "wrong value for " + compiler.name + " with " + shader_tool.name
                 assert timeout is False, "wrong value for " + compiler.name + " with " + shader_tool.name
                 assert message != "no_crash", "wrong value for " + compiler.name + " with " + shader_tool.name
@@ -179,7 +179,7 @@ def test_single_compile(tmpdir, conf, return_to_script, capsys):
                         + shader_tool.file_extension,
                         timeout_file)
                     os.chdir(timeout_path)
-                    crash, timeout, message = single_compile(compiler, timeout_file, shader_tool, 1, run_type, True)
+                    crash, timeout, message = single_compile(compiler, timeout_file, shader_tool, 3, run_type, True)
                     assert crash is False, "wrong value for " + compiler.name + " with " + shader_tool.name
                     assert timeout is True, "wrong value for " + compiler.name + " with " + shader_tool.name
                     assert message == "timeout", "wrong value for " + compiler.name + " with " + shader_tool.name
