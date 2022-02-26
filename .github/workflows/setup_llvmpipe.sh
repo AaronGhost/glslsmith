@@ -24,7 +24,7 @@ mkdir build
 mkdir install
 cd build
 echo "Meson"
-meson -D prefix="${HOME}/llvmpipe/install" -D dri-drivers-path=${HOME}/llvmpipe/install -D egl=enabled -D gles1=enabled -D gles2=enabled -D dri-drivers=auto -D vulkan-drivers=swarst -D gallium-drivers=swrast -D glx=dri -Dplatform=x11
+meson -D prefix="${HOME}/llvmpipe/install" -D dri-drivers-path=${HOME}/llvmpipe/install -D egl=enabled -D gles1=enabled -D gles2=enabled -D dri-drivers=auto -D vulkan-drivers=swrast -D gallium-drivers=swrast -D glx=dri -Dplatform=x11
 echo "ninja"
 ninja
 ninja install
