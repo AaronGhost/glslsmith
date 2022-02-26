@@ -86,8 +86,17 @@ jobs:
       - name: Copy Shadertrap dependencies
         run:
           cp ~/angle/lib/libEGL.so ~/angle/lib/libEGL.so.1
-          
-      # Amber
+
+      # Shadertrap Testing
+      - name: Install Shadertrap
+        run: |
+          mkdir ~/shadertrap && cd ~/shadertrap && curl -fsSL -o shadertrap.zip https://github.com/google/gfbuild-shadertrap/releases/download/github%2Fgoogle%2Fgfbuild-shadertrap%2Fb4e8470b3d69ef063b318248ae47e25e3081199c/gfbuild-shadertrap-b4e8470b3d69ef063b318248ae47e25e3081199c-Linux_x64_Release.zip && unzip shadertrap.zip
+      
+      - name: Tests with Shadertrap back-end
+        run: |
+         cd scripts && python -m pytest --cov --ignore graphicsfuzz -q --config_file=$GITHUB_WORKSPACE/.github/workflows/shadertrap_config.xml
+         
+      # Amber Testing
       - name: Install Amber
         run: |
           mkdir ~/amber && cd ~/amber && curl -fsSL -o amber.zip https://github.com/google/gfbuild-amber/releases/download/github%2Fgoogle%2Fgfbuild-amber%2F0c514a34280aaf303f6b625b0285513be8cf2d8e/gfbuild-amber-0c514a34280aaf303f6b625b0285513be8cf2d8e-Linux_x64_Debug.zip && unzip amber.zip
@@ -98,19 +107,6 @@ jobs:
           echo "VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d" >> $GITHUB_ENV 
           echo "VK_ICD_FILENAMES=/home/runner/llvmpipe/install/share/vulkan/icd.d/lvp_icd.x86_64.json" >> $GITHUB_ENV
 
-      - name: Check Amber with valid shader
-        run: |
-          env /home/runner/amber/bin/amber $GITHUB_WORKSPACE/scripts/testdata/amber_shaders/shader_1.amber
-
       - name: Test with Amber back-end
         run: |
           cd scripts && python -m pytest --cov --cov-append --ignore graphicsfuzz -q --config_file=$GITHUB_WORKSPACE/.github/workflows/amber_config.xml
-
-      # Shadertrap
-      - name: Install Shadertrap
-        run: |
-          mkdir ~/shadertrap && cd ~/shadertrap && curl -fsSL -o shadertrap.zip https://github.com/google/gfbuild-shadertrap/releases/download/github%2Fgoogle%2Fgfbuild-shadertrap%2Fb4e8470b3d69ef063b318248ae47e25e3081199c/gfbuild-shadertrap-b4e8470b3d69ef063b318248ae47e25e3081199c-Linux_x64_Release.zip && unzip shadertrap.zip
-      
-      - name: Tests with Shadertrap back-end
-        run: |
-         cd scripts && python -m pytest --cov --ignore graphicsfuzz -q --config_file=$GITHUB_WORKSPACE/.github/workflows/shadertrap_config.xml
