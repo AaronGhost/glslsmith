@@ -32,11 +32,6 @@
 			<path>/home/runner/shadertrap/bin/shadertrap</path>
 			<extension>.shadertrap</extension>
 		</shadertool>
-		<shadertool>
-			<name>amber</name>
-			<path>/home/runner/amber/bin/amber</path>
-			<extension>.amber</extension>
-		</shadertool>
 	</shadertools>
 	<reducers>
 		<reducer>

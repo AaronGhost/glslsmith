@@ -100,23 +100,11 @@ jobs:
         run: |
           mkdir ~/amber && cd ~/amber && curl -fsSL -o amber.zip https://github.com/google/gfbuild-amber/releases/download/github%2Fgoogle%2Fgfbuild-amber%2F0c514a34280aaf303f6b625b0285513be8cf2d8e/gfbuild-amber-0c514a34280aaf303f6b625b0285513be8cf2d8e-Linux_x64_Debug.zip && unzip amber.zip
 
-
-      # Check if we can run Shadertrap independently
-      - name: Test shadertrap with llvmpipe
-        run: |
-          env LD_LIBRARY_PATH=/home/runner/llvmpipe/install/:LD_LIBRARY_PATH /home/runner/shadertrap/bin/shadertrap scripts/testdata/shadertrap_shaders/shader_1.shadertrap
-      
-      # Check if we can run Amber
-      - name: Inspect Vulkan
-        run : |
-          ls /home/runner/llvmpipe/install
-      
-      - name: Test amber
-        run: |
-          env VK_ICD_FILENAMES=/home/runner/llvmpipe/install/share/vulkan/icd.d/lvp_icd.x86_64.json VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d LD_LIBRARY_PATH=$VULKAN_SDK/lib:$LD_LIBRARY_PATH /home/runner/amber/bin/amber scripts/testdata/amber_shaders/shader_1.amber
-  
       # Tests 
-      - name: Tests with pytest
+      - name: Tests with Shadertrap back-end
         run: |
-         cd scripts 
-      # && python -m pytest --cov --ignore graphicsfuzz -q --config_file=$GITHUB_WORKSPACE/.github/workflows/config.xml
+         cd scripts && python -m pytest --cov --ignore graphicsfuzz -q --config_file=$GITHUB_WORKSPACE/.github/workflows/shadertrap_config.xml
+
+      - name: Test with Amber back-end
+        run: |
+          cd scripts && python -m pytest --cov --cov-append --ignore graphicsfuzz -q --config_file=$GITHUB_WORKSPACE/.github/workflows/amber_config.xml
