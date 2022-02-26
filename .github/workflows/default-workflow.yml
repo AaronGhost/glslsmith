@@ -112,7 +112,7 @@ jobs:
 
       - name: Check Amber with valid shader
         run: |
-          env VK_ICD_FILENAMES=/home/runner/llvmpipe/install/share/vulkan/icd.d/lvp_icd.x86_64.json scripts/testdata/amber_shaders/shader_1.amber && env
+          env VK_ICD_FILENAMES=/home/runner/llvmpipe/install/share/vulkan/icd.d/lvp_icd.x86_64.json amber $GITHUB_WORKSPACE/scripts/testdata/amber_shaders/shader_1.amber && env
 
       - name: Test with Amber back-end
         run: |
