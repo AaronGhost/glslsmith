@@ -132,7 +132,7 @@ def test_single_compile(tmpdir, conf, return_to_script, capsys):
                     script_location + "/testdata/" + shader_tool.name + "_shaders/shader_1" + shader_tool.file_extension,
                     normal_file)
                 os.chdir(buffer_path)
-                crash, timeout, message = single_compile(compiler, normal_file, shader_tool, 5, run_type, False)
+                crash, timeout, message = single_compile(compiler, normal_file, shader_tool, 10, run_type, False)
                 assert crash is False, "wrong value for " + compiler.name + " with " + shader_tool.name
                 assert timeout is False, "wrong value for " + compiler.name + " with " + shader_tool.name
                 assert message == "no_crash", "wrong value for " + compiler.name + " with " + shader_tool.name
