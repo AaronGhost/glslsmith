@@ -186,4 +186,4 @@ def test_single_compile(tmpdir, conf, return_to_script, capsys):
                     if run_type == "add_id":
                         assert os.path.isfile(timeout_path.join(
                             "ids.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
-        # capsys.readouterr()
+        capsys.readouterr()

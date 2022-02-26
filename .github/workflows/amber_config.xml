@@ -14,7 +14,7 @@
 			<renderer>lavapipe</renderer>
 			<type>independent</type>
 			<LD_LIBRARY_PATH> </LD_LIBRARY_PATH>
-			<VK_ICD_FILENAMES>/home/runner/llvmpipe/install/share/vulkan/icd.d/lvp_icd.x64_86.json</VK_ICD_FILENAMES>
+			<VK_ICD_FILENAMES> </VK_ICD_FILENAMES>
 			<otherenvs> </otherenvs>
 		</compiler>
 		<compiler>
