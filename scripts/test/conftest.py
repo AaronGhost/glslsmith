@@ -30,7 +30,8 @@ def conf(request):
     conf_dict = {"exec_dirs": DirSettings.load_dir_settings(conf_path),
                  "compilers": Compiler.load_compilers_settings(conf_path),
                  "reducers": Reducer.load_reducers_settings(conf_path),
-                 "shadertools": ShaderTool.load_shader_tools(conf_path)}
+                 "shadertools": ShaderTool.load_shader_tools(conf_path),
+                 "conf_path": conf_path}
     return conf_dict
 
 

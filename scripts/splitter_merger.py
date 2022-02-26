@@ -26,9 +26,9 @@ def get_glslcode_from_shadertrap(shadertrap_text):
 
 
 def get_glslcode_from_amber(amber_text):
-    amber_reg = re.compile(r"SHADER compute computeShader GLSL\n(.*?)END\n", re.DOTALL)
+    amber_reg = re.compile(r"SHADER compute (.*?) GLSL\n(.*?)END\n", re.DOTALL)
     match_object = amber_reg.search(amber_text)
-    return match_object.group(1)
+    return match_object.group(2)
 
 
 def get_glslcode(shader_tool, text):
@@ -78,8 +78,10 @@ def main():
 
     if not ns.split_file and not ns.merge_files:
         print("Please precise the attempted operation, see the commandline option --help for more details")
+        exit(1)
     if ns.split_file and ns.merge_files:
         print("Please provide only one operation at a time, see --help for the available operations")
+        exit(1)
     if ns.split_file:
         split(shader_tool, ns.split_file[0], ns.split_file[1])
     if ns.merge_files:
