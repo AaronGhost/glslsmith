@@ -110,7 +110,7 @@ jobs:
       # Check if we can run Amber
       - name: Test amber
         run: |
-          /home/runner/amber/bin/amber scripts/testdata/amber_shaders/shader_1.amber
+          env VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d LD_LIBRARY_PATH=$VULKAN_SDK/lib:$LD_LIBRARY_PATH /home/runner/amber/bin/amber scripts/testdata/amber_shaders/shader_1.amber
   
       # Tests 
       - name: Tests with pytest
