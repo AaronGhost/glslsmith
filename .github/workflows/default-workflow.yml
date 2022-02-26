@@ -110,7 +110,7 @@ jobs:
       # Check if we can run Amber
       - name: Inspect Vulkan
         run : |
-          ls $VULKAN_SDK/etc/vulkan/icd.d
+          ls $VULKAN_SDK/etc/vulkan/
       
       - name: Test amber
         run: |
