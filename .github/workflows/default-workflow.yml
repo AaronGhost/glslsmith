@@ -109,7 +109,6 @@ jobs:
       - name: Prepare Vulkan environment for Amber back-end
         run: |
           echo "LD_LIBRARY_PATH=$VULKAN_SDK/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        run: |
           echo "VK_LAYER_PATH=$VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d" >> $GITHUB_ENV 
 
       - name: Check Amber with valid shader
