@@ -105,6 +105,11 @@ jobs:
         run: |
          cd scripts && python -m pytest --cov --ignore graphicsfuzz -q --config_file=$GITHUB_WORKSPACE/.github/workflows/shadertrap_config.xml
 
+
+      - name: Prepare Vulkan environment for Amber back-end
+        run: |
+          echo "LD_LIBRARY_PATH=$VULKAN_SDK/lib:$LD_LIBRARY_PATH\nVK_LAYER_PATH=$VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d\n" >> $GITHUB_ENV 
+
       - name: Test with Amber back-end
         run: |
           cd scripts && python -m pytest --cov --cov-append --ignore graphicsfuzz -q --config_file=$GITHUB_WORKSPACE/.github/workflows/amber_config.xml
