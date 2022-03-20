@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <config>
 	<dirsettings>
-		<graphicsfuzz>/home/runner/work/glslsmith/glslsmith/graphicsfuzz/graphicsfuzz/target/graphicsfuzz/python/drivers/</graphicsfuzz>
+		<graphicsfuzz>/home/runner/work/glslsmith/glslsmith/graphicsfuzz/</graphicsfuzz>
 		<execdir>/home/runner/work/glslsmith/glslsmith/</execdir>
 		<shaderoutput>./glslsmithoutput/shaders/</shaderoutput>
 		<dumpbufferdir>./glslsmithoutput/buffers/</dumpbufferdir>
