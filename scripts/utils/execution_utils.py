@@ -14,10 +14,10 @@
 
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
-import shlex
 
 from utils.Compiler import Compiler
 from utils.DirSettings import DirSettings
@@ -25,7 +25,7 @@ from utils.Reducer import Reducer
 from utils.ShaderTool import ShaderTool
 from utils.file_utils import find_buffer_file, clean_files, concatenate_files
 
-from scripts.utils.file_utils import find_digit_buffer_file
+from scripts.utils.file_utils import find_digit_buffer_file, ensure_abs_path
 
 
 def build_compiler_dict(compilers, restrict_compilers):
@@ -106,6 +106,22 @@ def collect_process_return(process_return, check_value):
         print(message)
         return False, message
     return True, message
+
+
+def call_glslsmith_generator(graphicsfuzz, exec_dir, shadercount, output_directory, seed=-1, host="shadertrap"):
+    cmd = [graphicsfuzz + "graphicsfuzz/target/graphicsfuzz/python/drivers/glslsmith-generator", "--shader-count",
+           str(shadercount), "--output-directory", ensure_abs_path(exec_dir, output_directory)]
+    if seed != -1:
+        cmd += ["--seed", str(seed)]
+    if host != "shadertrap":
+        cmd += r' --printer ' + str(host)
+    return collect_process_return(subprocess.run(cmd, capture_output=True, text=True), "SUCCESS!")
+
+
+def call_glslsmith_reconditioner(graphicsfuzz, exec_dir, shader, harness):
+    cmd = [graphicsfuzz + "graphicsfuzz/target/graphicsfuzz/python/drivers/glslsmith-recondition", "--src",
+           ensure_abs_path(exec_dir, str(shader)), "--dest", ensure_abs_path(exec_dir, harness)]
+    return collect_process_return(subprocess.run(cmd, capture_output=True, text=True), "SUCCESS!")
 
 
 def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, verbose=False):

@@ -16,7 +16,7 @@ import argparse
 import re
 from subprocess import run
 
-from scripts.utils.execution_utils import env_setup, collect_process_return
+from scripts.utils.execution_utils import env_setup, collect_process_return, call_glslsmith_reconditioner
 from scripts.utils.file_utils import clean_files
 from splitter_merger import split
 
@@ -50,14 +50,14 @@ def print_file_report(shader_file):
     print("Wrapper calls: " + str(wrapper_count))
 
 
-def stats_shader(graphicsfuzz, shader_tool, shader, harness_file):
+def stats_shader(graphicsfuzz, exec_dir, shader_tool, shader, harness_file):
     shader_file = r'tmp.glsl'
     # Post-process the shader
     # TODO reformat this with a post-processing function call
-    cmd = [graphicsfuzz + "glslsmith-recondition", "--src", str(shader), "--dest", harness_file]
-    check_passed, message = collect_process_return(run(cmd, capture_output=True, text=True), "SUCCESS!")
+    check_passed, message = call_glslsmith_reconditioner(graphicsfuzz, exec_dir, shader, harness_file)
     if not check_passed:
         print(shader + " cannot be parsed for post-processing")
+        print(message)
         exit(1)
 
     # Split the shader from the embedding code
@@ -77,7 +77,7 @@ def main():
     ns, exec_dirs, _, _, shader_tool = env_setup(parser)
 
     harness_file = r'tmp' + shader_tool.file_extension
-    stats_shader(exec_dirs.graphicsfuzz, ns.shader_tool, ns.shader, harness_file)
+    stats_shader(exec_dirs.graphicsfuzz, exec_dirs.execdir, ns.shader_tool, ns.shader, harness_file)
 
 
 if __name__ == "__main__":

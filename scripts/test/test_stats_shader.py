@@ -51,7 +51,7 @@ class TestStatsShader:
         shutil.copy("testdata/stats_shader/" + origin_file, location)
         # TODO make test harness language independent
         if conf["shadertools"][0].name == "shadertrap":
-            stats_shader(conf["exec_dirs"].graphicsfuzz, conf["shadertools"][0], location,
+            stats_shader(conf["exec_dirs"].graphicsfuzz, conf["exec_dirs"].execdir, conf["shadertools"][0], location,
                          str(tmpdir.join("tmp.shadertrap")))
             outputs = capsys.readouterr()
             assert outputs.out == output_text
@@ -59,7 +59,7 @@ class TestStatsShader:
 
     def test_stats_shader_missing_buffer(self, conf):
         with pytest.raises(SystemExit) as e:
-            stats_shader(conf["exec_dirs"].graphicsfuzz, conf["shadertools"][0], "testdata/shader.glsl",
-                         "testdata/shader.shadertrap")
+            stats_shader(conf["exec_dirs"].graphicsfuzz, conf["exec_dirs"].execdir, conf["shadertools"][0],
+                         "testdata/shader.glsl", "testdata/shader.shadertrap")
             assert e.type == SystemExit
             assert isinstance(e.value.code, str)

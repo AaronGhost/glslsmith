@@ -47,7 +47,7 @@ def find_file(current_dir, regex_pattern=""):
     return buffer_files
 
 
-def find_digit_buffer_file(current_dir):
+def find_digit_buffer_file(current_dir):  # pragma: no cover
     return find_file(current_dir, "buffer_[0-9]+")
 
 
