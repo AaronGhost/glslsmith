@@ -115,7 +115,7 @@ def call_glslsmith_generator(graphicsfuzz, exec_dir, shadercount, output_directo
     if seed != -1:
         cmd += ["--seed", str(seed)]
     if host != "shadertrap":
-        cmd += r' --printer ' + str(host)
+        cmd += ["--printer", str(host)]
     return collect_process_return(subprocess.run(cmd, capture_output=True, text=True), "SUCCESS!")
 
 
