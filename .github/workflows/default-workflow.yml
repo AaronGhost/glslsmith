@@ -98,10 +98,12 @@ jobs:
          
       # Amber Testing
       - name: Install Amber
+        if: always()
         run: |
           mkdir ~/amber && cd ~/amber && curl -fsSL -o amber.zip https://github.com/google/gfbuild-amber/releases/download/github%2Fgoogle%2Fgfbuild-amber%2F0c514a34280aaf303f6b625b0285513be8cf2d8e/gfbuild-amber-0c514a34280aaf303f6b625b0285513be8cf2d8e-Linux_x64_Debug.zip && unzip amber.zip
           
       - name: Prepare Vulkan environment for Amber back-end
+        if: always()
         run: |
           echo "LD_LIBRARY_PATH=$VULKAN_SDK/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
           echo "VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d" >> $GITHUB_ENV 
