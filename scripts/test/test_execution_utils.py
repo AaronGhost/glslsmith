@@ -22,7 +22,7 @@ from scripts.utils import execution_utils
 from scripts.utils.Reducer import Reducer
 from scripts.utils.ShaderTool import ShaderTool
 from scripts.utils.execution_utils import select_reducer, select_shader_tool, env_setup, find_amber_buffers, \
-    prepare_amber_command, prepare_shadertrap_command, collect_process_return, single_compile
+    prepare_amber_command, prepare_shadertrap_command, collect_process_return, single_compile, call_glslsmith_generator
 
 
 def test_build_compiler_dict(compilers_list, compilers_dict):
@@ -72,7 +72,6 @@ def test_env_setup():
     assert shade_tool.name == "shadertrap"
 
 
-# TODO fix this with real Amber examples
 @pytest.mark.parametrize("filename, result", [("shader_1.amber", [("buffer_0", "0", "0")]),
                                               ("shader_2.amber", [("buffer_ids", "0", "0"), ("buffer_0", "0", "1"),
                                                                   ("buffer_1", "0", "2"), ("buffer_2", "0", "3"),
@@ -108,6 +107,15 @@ def test_collect_process_return():
     assert collect_process_return(process_return_1, "passed") == (False, "Every path leads to SUCCESS!")
     process_return_2 = Outputs("whatever", "1 passed")
     assert collect_process_return(process_return_2, "passed") == (True, "whatever1 passed")
+
+
+@pytest.mark.parametrize("seed, host, number, expected_result", [(-1, "shadertrap", 50, True),
+                                                                 (1234, "amber", 20, True),
+                                                                 (-1, "null", 0, False)])
+def test_call_glslsmith_generator(seed, host, number, expected_result, conf, tmp_path):
+    generation_result, _ = call_glslsmith_generator(conf["exec_dirs"].graphicsfuzz, tmp_path, number, tmp_path, seed, host)
+    assert generation_result == expected_result
+    assert len(os.listdir(tmp_path)) == number
 
 
 @pytest.fixture()

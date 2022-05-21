@@ -108,6 +108,7 @@ def collect_process_return(process_return, check_value):
     return True, message
 
 
+# TODO Add tests for the generator wrapping
 def call_glslsmith_generator(graphicsfuzz, exec_dir, shadercount, output_directory, seed=-1, host="shadertrap"):
     cmd = [graphicsfuzz + "graphicsfuzz/target/graphicsfuzz/python/drivers/glslsmith-generator", "--shader-count",
            str(shadercount), "--output-directory", ensure_abs_path(exec_dir, output_directory)]
@@ -118,9 +119,14 @@ def call_glslsmith_generator(graphicsfuzz, exec_dir, shadercount, output_directo
     return collect_process_return(subprocess.run(cmd, capture_output=True, text=True), "SUCCESS!")
 
 
-def call_glslsmith_reconditioner(graphicsfuzz, exec_dir, shader, harness):
+# TODO Add tests for the reconditioning wrapping
+def call_glslsmith_reconditioner(graphicsfuzz, exec_dir, shader, harness, run_type="standard"):
     cmd = [graphicsfuzz + "graphicsfuzz/target/graphicsfuzz/python/drivers/glslsmith-recondition", "--src",
            ensure_abs_path(exec_dir, str(shader)), "--dest", ensure_abs_path(exec_dir, harness)]
+    if run_type == "id_wrappers":
+        cmd += ["--id_wrappers"]
+    elif run_type == "reduce_wrappers":
+        cmd += ["--reduce_wrappers", "ids.txt"]
     return collect_process_return(subprocess.run(cmd, capture_output=True, text=True), "SUCCESS!")
 
 
@@ -193,6 +199,14 @@ def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, 
 
 # TODO in the case of double-run, run at least twice the system to check if the ids match
 #  (otherwise, in the case of defects, we might crash on the other compilers
+# Steps
+# Check that file exists -> harness file exists
+# Check post-processing mode
+# Post process file -> post-process harness file exists
+# Compile on all compilers
+# Call single compiler -> buffer_results.txt exist
+# Combine buffers?
+
 def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, output_seed="", move_dir="./",
                         verbose=False, timeout=10, double_run=False, postprocessing=True):
     no_compile_errors = []
