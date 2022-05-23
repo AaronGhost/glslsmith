@@ -86,14 +86,14 @@ def find_amber_buffers(shader_to_compile):
 
 
 def prepare_amber_command(amber_tool_path, output_file, shader_name, add_id):
-    amber_command = amber_tool_path + " -d -b " + output_file
-    if add_id:
-        _, descriptor_set, binding = find_amber_buffers(shader_name)[0]
-        return amber_command + " -B " + binding + " " + shader_name
-    else:
-        for _, descriptor_set, binding in find_amber_buffers(shader_name):
+    original_amber_command = amber_tool_path + " -d -b " + output_file
+    amber_command = original_amber_command
+    for name, descriptor_set, binding in find_amber_buffers(shader_name):
+        if add_id and name == "buffer_ids":
+            return original_amber_command + " -B " + binding + " " + shader_name
+        if not add_id and name != "buffer_ids":
             amber_command += " -B " + binding
-        return amber_command + " " + shader_name
+    return amber_command + " " + shader_name
 
 
 def prepare_shadertrap_command(shader_tool_path, renderer, shader_name):
@@ -108,7 +108,6 @@ def collect_process_return(process_return, check_value):
     return True, message
 
 
-# TODO Add tests for the generator wrapping
 def call_glslsmith_generator(graphicsfuzz, exec_dir, shadercount, output_directory, seed=-1, host="shadertrap"):
     cmd = [graphicsfuzz + "graphicsfuzz/target/graphicsfuzz/python/drivers/glslsmith-generator", "--shader-count",
            str(shadercount), "--output-directory", ensure_abs_path(exec_dir, output_directory)]
@@ -123,10 +122,10 @@ def call_glslsmith_generator(graphicsfuzz, exec_dir, shadercount, output_directo
 def call_glslsmith_reconditioner(graphicsfuzz, exec_dir, shader, harness, run_type="standard"):
     cmd = [graphicsfuzz + "graphicsfuzz/target/graphicsfuzz/python/drivers/glslsmith-recondition", "--src",
            ensure_abs_path(exec_dir, str(shader)), "--dest", ensure_abs_path(exec_dir, harness)]
-    if run_type == "id_wrappers":
+    if run_type == "add_id":
         cmd += ["--id_wrappers"]
-    elif run_type == "reduce_wrappers":
-        cmd += ["--reduce_wrappers", "ids.txt"]
+    elif run_type == "reduced":
+        cmd += ["--reduce_wrappers", ensure_abs_path(exec_dir, "buffer_results.txt")]
     return collect_process_return(subprocess.run(cmd, capture_output=True, text=True), "SUCCESS!")
 
 
@@ -166,23 +165,16 @@ def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, 
                                        text=True)
             for buffer_file in ls_return.stdout.split():
                 subprocess.run(["adb", "pull", buffer_file], capture_output=True, text=True)
-            # If we are only interested in the ids
-        elif run_type == "add_id":
-            if os.path.isfile("buffer_result.txt"):
-                shutil.move("buffer_result.txt", "ids.txt")
-            elif os.path.isfile("buffer_ids.txt"):
-                shutil.move("buffer_ids.txt", "ids.txt")
-            else:
-                open("ids.txt", 'a').close()
 
-        # Clean in the case of android
-        if compiler.type == "android":
+            # Clean in the case of android
             subprocess.run(["adb", "shell", "rm", "/data/local/tmp/buffer_*", "/data/local/tmp/" + shader_to_compile],
                            capture_output=True, text=True)
 
     # Timeout case
     except subprocess.TimeoutExpired:
-        open("ids.txt", 'a').close()
+        with open("buffer_result.txt", 'w') as file:
+            file.write("timeout")
+            file.close()
         return False, True, "timeout"
 
     # Detect error at compilation time
@@ -190,10 +182,18 @@ def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, 
         check_passed, message = collect_process_return(process_return, "1 pass")
     else:
         check_passed, message = collect_process_return(process_return, "SUCCESS!")
-        if check_passed and run_type != "add_id":
-            buffer_files = find_digit_buffer_file(os.getcwd())
-            # Exclude combined files from concatenation and removal
-            concatenate_files("buffer_result.txt", buffer_files)
+        if check_passed:
+            if run_type == "add_id":
+                shutil.move("buffer_ids.txt", "buffer_result.txt")
+            else:
+                buffer_files = find_digit_buffer_file(os.getcwd())
+                # Exclude combined files from concatenation and removal
+                concatenate_files("buffer_result.txt", buffer_files)
+    if not check_passed:
+        with open("buffer_result.txt", 'w') as file:
+            file.write("crash")
+            file.close()
+
     return not check_passed, False, message if not check_passed else "no_crash"
 
 

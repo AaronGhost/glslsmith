@@ -72,4 +72,8 @@ def ensure_abs_path(root_dir, test_dir):
     if os.path.isabs(test_dir):
         return test_dir
     else:
-        return os.path.normpath(os.path.join(root_dir, test_dir)) + "/"
+        full_path = os.path.normpath(os.path.join(root_dir, test_dir))
+        if test_dir[-1] == "/":
+            return full_path + "/"
+        else:
+            return full_path

@@ -78,3 +78,4 @@ def test_get_seed(buffer_name, seed):
 def test_ensure_abs_path(tmpdir):
     assert ensure_abs_path(tmpdir, os.getcwd()) == os.getcwd()
     assert ensure_abs_path(tmpdir, "./execdir/") == str(tmpdir.join("execdir")) + "/"
+    assert ensure_abs_path(tmpdir, "./file") == str(tmpdir.join("file"))

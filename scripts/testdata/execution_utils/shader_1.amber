@@ -8,13 +8,8 @@ layout(std430, binding = 0) buffer buffer_0 {
  uint ext_0[6];
 } ;
 
-layout(std430, binding = 1) buffer buffer_ids {
- int ids[1];
-} ;
-
 void main()
 {
-  ids[0] = 1;
   for(int i = 0; i < 6; i++){
     ext_0[i] = 1u;
   }
@@ -22,16 +17,12 @@ void main()
 END
 
 BUFFER buffer_0 DATA_TYPE uint32 DATA
-0 0 0 0 0 0
-END
-
-BUFFER buffer_ids DATA_TYPE int32 DATA
-0
+0 0 0 0 0 0 # DATA_SIZE 6
 END
 
 PIPELINE compute pipeline
     ATTACH compute_shader
-    BIND BUFFER buffer_ids AS storage DESCRIPTOR_SET 0 BINDING 1
+
     BIND BUFFER buffer_0 AS storage DESCRIPTOR_SET 0 BINDING 0
 END
 

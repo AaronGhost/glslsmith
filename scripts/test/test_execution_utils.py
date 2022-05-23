@@ -22,7 +22,8 @@ from scripts.utils import execution_utils
 from scripts.utils.Reducer import Reducer
 from scripts.utils.ShaderTool import ShaderTool
 from scripts.utils.execution_utils import select_reducer, select_shader_tool, env_setup, find_amber_buffers, \
-    prepare_amber_command, prepare_shadertrap_command, collect_process_return, single_compile, call_glslsmith_generator
+    prepare_amber_command, prepare_shadertrap_command, collect_process_return, single_compile, call_glslsmith_generator, \
+    call_glslsmith_reconditioner
 
 
 def test_build_compiler_dict(compilers_list, compilers_dict):
@@ -72,7 +73,7 @@ def test_env_setup():
     assert shade_tool.name == "shadertrap"
 
 
-@pytest.mark.parametrize("filename, result", [("shader_1.amber", [("buffer_0", "0", "0")]),
+@pytest.mark.parametrize("filename, result", [("shader_1.amber", [("buffer_ids", "0", "1"), ("buffer_0", "0", "0")]),
                                               ("shader_2.amber", [("buffer_ids", "0", "0"), ("buffer_0", "0", "1"),
                                                                   ("buffer_1", "0", "2"), ("buffer_2", "0", "3"),
                                                                   ("buffer_3", "0", "4")])])
@@ -84,7 +85,7 @@ def test_find_amber_buffers(filename, result):
     ("shader_1.amber", False, "./amber -d -b buffer_output.txt -B 0 testdata/amber_shaders/shader_1.amber"),
     ("shader_2.amber", True, "./amber -d -b buffer_output.txt -B 0 testdata/amber_shaders/shader_2.amber"),
     ("shader_2.amber", False,
-     "./amber -d -b buffer_output.txt -B 0 -B 1 -B 2 -B 3 -B 4 testdata/amber_shaders/shader_2.amber")])
+     "./amber -d -b buffer_output.txt -B 1 -B 2 -B 3 -B 4 testdata/amber_shaders/shader_2.amber")])
 def test_prepare_amber_command(shader_name, add_id, result):
     assert prepare_amber_command("./amber", "buffer_output.txt", "testdata/amber_shaders/" + shader_name,
                                  add_id) == result
@@ -110,12 +111,27 @@ def test_collect_process_return():
 
 
 @pytest.mark.parametrize("seed, host, number, expected_result", [(-1, "shadertrap", 50, True),
-                                                                 (1234, "amber", 20, True),
-                                                                 (-1, "null", 0, False)])
+                                                                 (1234, "amber", 20, True)])
 def test_call_glslsmith_generator(seed, host, number, expected_result, conf, tmp_path):
-    generation_result, _ = call_glslsmith_generator(conf["exec_dirs"].graphicsfuzz, tmp_path, number, tmp_path, seed, host)
+    generation_result, _ = call_glslsmith_generator(conf["exec_dirs"].graphicsfuzz, str(tmp_path) + "/", number,
+                                                    str(tmp_path) + "/", seed, host)
     assert generation_result == expected_result
     assert len(os.listdir(tmp_path)) == number
+
+
+@pytest.mark.parametrize("run_type, harness, expected_result",
+                         [("standard", "r1.shadertrap", True), ("add_id", "r2.amber", True),
+                          ("reduced", "r3.shadertrap", True)])
+def test_call_glslsmith_reconditioner(run_type, harness, expected_result, conf, tmp_path):
+    # TODO copy the necessary file to the tmp_path
+    extension = "." + harness.split(".")[1]
+    shutil.copy("testdata/execution_utils/shader_1" + extension, str(tmp_path) + "/shader" + extension)
+    shutil.copy("testdata/execution_utils/buffer_results.txt", str(tmp_path) + "/buffer_results.txt")
+
+    reconditioning_result, _ = call_glslsmith_reconditioner(conf["exec_dirs"].graphicsfuzz, str(tmp_path) + "/",
+                                                            "shader" + extension, "result" + extension, run_type)
+    assert reconditioning_result == expected_result
+    assert True
 
 
 @pytest.fixture()
@@ -131,7 +147,7 @@ def test_single_compile(tmpdir, conf, return_to_script, capsys):
     for shader_tool in conf["shadertools"]:
         for compiler in conf["compilers"]:
             for run_type in ["normal", "add_id"]:
-                # Test normal
+                # Normal file test
                 buffer_path = tmpdir.join("d" + str(tmpdir_counter))
                 tmpdir_counter += 1
                 buffer_path.mkdir()
@@ -144,13 +160,17 @@ def test_single_compile(tmpdir, conf, return_to_script, capsys):
                 assert crash is False, "wrong value for " + compiler.name + " with " + shader_tool.name
                 assert timeout is False, "wrong value for " + compiler.name + " with " + shader_tool.name
                 assert message == "no_crash", "wrong value for " + compiler.name + " with " + shader_tool.name
-                if run_type == "add_id":
-                    assert os.path.isfile(
-                        buffer_path.join("ids.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
-                else:
-                    assert os.path.isfile(buffer_path.join(
-                        "buffer_result.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
-                    with open("buffer_result.txt", "r") as f:
+                assert os.path.isfile(buffer_path.join(
+                    "buffer_result.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
+                with open("buffer_result.txt", "r") as f:
+                    if run_type == "add_id":
+                        if shader_tool.name == "shadertrap":
+                            assert f.readlines() == [
+                                '1'], "wrong value for " + compiler.name + " with " + shader_tool.name
+                        else:
+                            assert f.readlines() == [
+                                '1\n', ' 01 00 00 00\n'], "wrong value for " + compiler.name + " with " + shader_tool.name
+                    else:
                         if shader_tool.name == "shadertrap":
                             assert f.readlines() == [
                                 "1 1 1 1 1 1"], "wrong value for " + compiler.name + " with " + shader_tool.name
@@ -159,39 +179,45 @@ def test_single_compile(tmpdir, conf, return_to_script, capsys):
                                                      ' 01 00 00 00 01 00 00 00\n'], \
                                 "wrong value for " + compiler.name + " with " + shader_tool.name
 
-                # Test crash
-                crash_path = tmpdir.join("d" + str(tmpdir_counter))
-                tmpdir_counter += 1
-                crash_path.mkdir()
-                crash_file = str(crash_path) + "/crash" + shader_tool.file_extension
-                shutil.copy(
-                    script_location + "/testdata/" + shader_tool.name + "_shaders/crash" + shader_tool.file_extension,
-                    crash_file)
-                os.chdir(crash_path)
-                crash, timeout, message = single_compile(compiler, crash_file, shader_tool, 3, run_type, True)
-                assert crash is True, "wrong value for " + compiler.name + " with " + shader_tool.name
-                assert timeout is False, "wrong value for " + compiler.name + " with " + shader_tool.name
-                assert message != "no_crash", "wrong value for " + compiler.name + " with " + shader_tool.name
-                if run_type == "add_id":
-                    assert os.path.isfile(
-                        crash_path.join("ids.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
+            # Test crash
+            crash_path = tmpdir.join("d" + str(tmpdir_counter))
+            run_type = "normal"
+            tmpdir_counter += 1
+            crash_path.mkdir()
+            crash_file = str(crash_path) + "/crash" + shader_tool.file_extension
+            shutil.copy(
+                script_location + "/testdata/" + shader_tool.name + "_shaders/crash" + shader_tool.file_extension,
+                crash_file)
+            os.chdir(crash_path)
+            crash, timeout, message = single_compile(compiler, crash_file, shader_tool, 3, run_type,
+                                                     True)
+            assert crash is True, "wrong value for " + compiler.name + " with " + shader_tool.name
+            assert timeout is False, "wrong value for " + compiler.name + " with " + shader_tool.name
+            assert message != "no_crash", "wrong value for " + compiler.name + " with " + shader_tool.name
+            assert os.path.isfile(crash_path.join(
+                "buffer_result.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
+            with open("buffer_result.txt", "r") as f:
+                assert f.readlines() == [
+                    "crash"], "wrong value for " + compiler.name + " with " + shader_tool.name
 
-                # Test  timeout (Mesa compilers do not seem to timeout)
-                if compiler.name != "llvmpipe" and compiler.name != "vulkan-intel" and compiler.name != "lavapipe":
-                    timeout_path = tmpdir.join("d" + str(tmpdir_counter))
-                    tmpdir_counter += 1
-                    timeout_path.mkdir()
-                    timeout_file = str(timeout_path) + "/timeout" + shader_tool.file_extension
-                    shutil.copy(
-                        script_location + "/testdata/" + shader_tool.name + "_shaders/timeout"
-                        + shader_tool.file_extension,
-                        timeout_file)
-                    os.chdir(timeout_path)
-                    crash, timeout, message = single_compile(compiler, timeout_file, shader_tool, 3, run_type, True)
-                    assert crash is False, "wrong value for " + compiler.name + " with " + shader_tool.name
-                    assert timeout is True, "wrong value for " + compiler.name + " with " + shader_tool.name
-                    assert message == "timeout", "wrong value for " + compiler.name + " with " + shader_tool.name
-                    if run_type == "add_id":
-                        assert os.path.isfile(timeout_path.join(
-                            "ids.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
+            # Test  timeout (Mesa compilers do not seem to timeout)
+            if compiler.name != "llvmpipe" and compiler.name != "vulkan-intel" and compiler.name != "lavapipe":
+                timeout_path = tmpdir.join("d" + str(tmpdir_counter))
+                tmpdir_counter += 1
+                timeout_path.mkdir()
+                timeout_file = str(timeout_path) + "/timeout" + shader_tool.file_extension
+                shutil.copy(
+                    script_location + "/testdata/" + shader_tool.name + "_shaders/timeout"
+                    + shader_tool.file_extension,
+                    timeout_file)
+                os.chdir(timeout_path)
+                crash, timeout, message = single_compile(compiler, timeout_file, shader_tool, 3, run_type, True)
+                assert crash is False, "wrong value for " + compiler.name + " with " + shader_tool.name
+                assert timeout is True, "wrong value for " + compiler.name + " with " + shader_tool.name
+                assert os.path.isfile(crash_path.join(
+                    "buffer_result.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
+                with open("buffer_result.txt", "r") as f:
+                    assert f.readlines() == [
+                        "timeout"], "wrong value for " + compiler.name + " with " + shader_tool.name
+
         capsys.readouterr()

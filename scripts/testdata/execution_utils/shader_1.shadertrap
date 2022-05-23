@@ -1,6 +1,6 @@
 GLES 3.1
 CREATE_BUFFER buffer_ids SIZE_BYTES 4 INIT_VALUES int 0
-CREATE_BUFFER buffer_0 SIZE_BYTES 24 INIT_VALUES uint 0 0 0 0 0 0
+CREATE_BUFFER buffer_0 SIZE_BYTES 24 INIT_VALUES uint 0 0 0 0 0 0 #
 BIND_SHADER_STORAGE_BUFFER BUFFER buffer_ids BINDING 0
 BIND_SHADER_STORAGE_BUFFER BUFFER buffer_0 BINDING 1
 
@@ -18,7 +18,6 @@ layout(std430, binding = 1) buffer buffer_0 {
 
 void main()
 {
-  ids[0] = 1;
   for(int i = 0; i < 6; i++){
     ext_0[i] = 1u;
   }
