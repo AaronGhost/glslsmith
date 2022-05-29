@@ -40,7 +40,7 @@ def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref, 
     # Execute the host file with the different drivers
     clean_files(os.getcwd(), find_buffer_file(os.getcwd()))
     compilers = list(compilers_dict.values())
-    results = execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, shader_tool, shader_name,
+    results = execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, exec_dirs.exec_dir, shader_tool, shader_name,
                                   verbose=True, double_run=double_run, postprocessing=postprocessing)
     if clean_dir:
         clean_files(os.getcwd(), ["tmp" + shader_tool.file_extension])

@@ -123,7 +123,6 @@ def test_call_glslsmith_generator(seed, host, number, expected_result, conf, tmp
                          [("standard", "r1.shadertrap", True), ("add_id", "r2.amber", True),
                           ("reduced", "r3.shadertrap", True)])
 def test_call_glslsmith_reconditioner(run_type, harness, expected_result, conf, tmp_path):
-    # TODO copy the necessary file to the tmp_path
     extension = "." + harness.split(".")[1]
     shutil.copy("testdata/execution_utils/shader_1" + extension, str(tmp_path) + "/shader" + extension)
     shutil.copy("testdata/execution_utils/buffer_results.txt", str(tmp_path) + "/buffer_results.txt")
@@ -131,7 +130,7 @@ def test_call_glslsmith_reconditioner(run_type, harness, expected_result, conf, 
     reconditioning_result, _ = call_glslsmith_reconditioner(conf["exec_dirs"].graphicsfuzz, str(tmp_path) + "/",
                                                             "shader" + extension, "result" + extension, run_type)
     assert reconditioning_result == expected_result
-    assert True
+    assert os.path.isfile(str(tmp_path) + "/result" + extension)
 
 
 @pytest.fixture()
@@ -156,20 +155,22 @@ def test_single_compile(tmpdir, conf, return_to_script, capsys):
                     script_location + "/testdata/" + shader_tool.name + "_shaders/shader_1" + shader_tool.file_extension,
                     normal_file)
                 os.chdir(buffer_path)
-                crash, timeout, message = single_compile(compiler, normal_file, shader_tool, 10, run_type, False)
+                crash, timeout, message = single_compile(buffer_path, compiler, normal_file, shader_tool, 10, run_type,
+                                                         False)
                 assert crash is False, "wrong value for " + compiler.name + " with " + shader_tool.name
                 assert timeout is False, "wrong value for " + compiler.name + " with " + shader_tool.name
                 assert message == "no_crash", "wrong value for " + compiler.name + " with " + shader_tool.name
                 assert os.path.isfile(buffer_path.join(
-                    "buffer_result.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
-                with open("buffer_result.txt", "r") as f:
+                    "buffer_results.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
+                with open("buffer_results.txt", "r") as f:
                     if run_type == "add_id":
                         if shader_tool.name == "shadertrap":
                             assert f.readlines() == [
                                 '1'], "wrong value for " + compiler.name + " with " + shader_tool.name
                         else:
                             assert f.readlines() == [
-                                '1\n', ' 01 00 00 00\n'], "wrong value for " + compiler.name + " with " + shader_tool.name
+                                '1\n',
+                                ' 01 00 00 00\n'], "wrong value for " + compiler.name + " with " + shader_tool.name
                     else:
                         if shader_tool.name == "shadertrap":
                             assert f.readlines() == [
@@ -189,14 +190,14 @@ def test_single_compile(tmpdir, conf, return_to_script, capsys):
                 script_location + "/testdata/" + shader_tool.name + "_shaders/crash" + shader_tool.file_extension,
                 crash_file)
             os.chdir(crash_path)
-            crash, timeout, message = single_compile(compiler, crash_file, shader_tool, 3, run_type,
+            crash, timeout, message = single_compile(crash_path, compiler, crash_file, shader_tool, 3, run_type,
                                                      True)
             assert crash is True, "wrong value for " + compiler.name + " with " + shader_tool.name
             assert timeout is False, "wrong value for " + compiler.name + " with " + shader_tool.name
             assert message != "no_crash", "wrong value for " + compiler.name + " with " + shader_tool.name
             assert os.path.isfile(crash_path.join(
-                "buffer_result.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
-            with open("buffer_result.txt", "r") as f:
+                "buffer_results.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
+            with open("buffer_results.txt", "r") as f:
                 assert f.readlines() == [
                     "crash"], "wrong value for " + compiler.name + " with " + shader_tool.name
 
@@ -211,13 +212,57 @@ def test_single_compile(tmpdir, conf, return_to_script, capsys):
                     + shader_tool.file_extension,
                     timeout_file)
                 os.chdir(timeout_path)
-                crash, timeout, message = single_compile(compiler, timeout_file, shader_tool, 3, run_type, True)
+                crash, timeout, message = single_compile(timeout_path, compiler, timeout_file, shader_tool, 3, run_type,
+                                                         True)
                 assert crash is False, "wrong value for " + compiler.name + " with " + shader_tool.name
                 assert timeout is True, "wrong value for " + compiler.name + " with " + shader_tool.name
                 assert os.path.isfile(crash_path.join(
-                    "buffer_result.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
-                with open("buffer_result.txt", "r") as f:
+                    "buffer_results.txt")), "wrong value for " + compiler.name + " with " + shader_tool.name
+                with open("buffer_results.txt", "r") as f:
                     assert f.readlines() == [
                         "timeout"], "wrong value for " + compiler.name + " with " + shader_tool.name
 
         capsys.readouterr()
+
+
+def test_execute_compilation(tmpdir, conf, capsys):
+    # Non existing file (except error)
+    tmpdir.mkdir("empty")
+    shader_tool: ShaderTool = conf["shadertools"][0]
+    compilers_dict = execution_utils.build_compiler_dict(conf["compilers"])
+    assert execution_utils.execute_compilation(compilers_dict, conf["exec_dirs"].graphicsfuzz,
+                                               str(tmpdir.join("empty")) + "/",
+                                               shader_tool, "empty.shadertrap") == ["missing"] * len(compilers_dict)
+
+    # Incomplete shader file (test failed reconditioning)
+    tmpdir.mkdir("incomplete")
+    shutil.copy("testdata/execution_utils/incomplete.shadertrap",
+                str(tmpdir.join("incomplete")) + "/incomplete.shadertrap")
+    assert execution_utils.execute_compilation(
+        compilers_dict, conf["exec_dirs"].graphicsfuzz, str(tmpdir.join("incomplete")), shader_tool,
+        str(tmpdir.join("incomplete")) + "/incomplete.shadertrap") == [
+               "failed_reconditioning"] * len(compilers_dict)
+
+    # Real shader file (no seed)
+    tmpdir.mkdir("sub")
+    shutil.copy("testdata/execution_utils/shader_1" + shader_tool.file_extension,
+                str(tmpdir.join("sub")) + "/shader_1" + shader_tool.file_extension)
+    assert execution_utils.execute_compilation(
+        compilers_dict, conf["exec_dirs"].graphicsfuzz, str(tmpdir.join("sub")),
+        shader_tool, str(tmpdir.join("sub")) + "/shader_1" + shader_tool.file_extension) == [
+               "no_crash"] * len(compilers_dict)
+
+    for compiler in conf["compilers"]:
+        assert os.path.isfile(str(tmpdir.join("sub")) + "/buffer_" + compiler.name + ".txt")
+
+    # Real shader file with seed
+    tmpdir.mkdir("seed")
+    shutil.copy("testdata/execution_utils/shader_1" + shader_tool.file_extension,
+                str(tmpdir.join("seed")) + "/shader_1" + shader_tool.file_extension)
+    assert execution_utils.execute_compilation(
+        compilers_dict, conf["exec_dirs"].graphicsfuzz, str(tmpdir.join("seed")),
+        shader_tool, str(tmpdir.join("seed")) + "/shader_1" + shader_tool.file_extension, 0) == [
+               "no_crash"] * len(compilers_dict)
+
+    for compiler in conf["compilers"]:
+        assert os.path.isfile(str(tmpdir.join("seed")) + "/buffer_" + compiler.name + "_0.txt")

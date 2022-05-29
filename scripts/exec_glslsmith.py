@@ -54,7 +54,8 @@ def main():
     parser.add_argument('--verbose', dest='verbose', action='store_true',
                         help="Provide more logging information about the executed command")
     parser.add_argument('--glsl-only', dest="glsl_only", action="store_true",
-                        help="Generate the files, recondition them on the go and split out the glsl shader out of the harness")
+                        help="Generate the files, recondition them on the go and split out the glsl shader out of the "
+                             "harness")
 
     ns, exec_dirs, compilers_dict, reducer, shader_tool = env_setup(parser)
 
@@ -128,7 +129,7 @@ def main():
                 # Execute the program with the default implementation
                 for i in range(ns.shadercount):
                     result = execute_compilation(
-                        [compilers_dict.values()[0]], exec_dirs.graphicsfuzz, shader_tool,
+                        [compilers_dict.values()[0]], exec_dirs.graphicsfuzz, exec_dirs.exec_dir, shader_tool,
                         exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension, verbose=True)
                     if result[0] != "no_crash":
                         print("Error on shader " + str(i))
@@ -175,7 +176,7 @@ def main():
             clean_files(exec_dirs.dumpbufferdir, buffers)
             # Execute program compilation on each compiler and save the results for the batch
             for i in range(ns.shadercount):
-                execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, shader_tool,
+                execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, exec_dirs.exec_dir, shader_tool,
                                     exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
                                     str(i), exec_dirs.dumpbufferdir, verbose=ns.verbose,
                                     double_run=ns.double_run, postprocessing=True)
