@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 import argparse
+import filecmp
 import os
 import shutil
 import sys
+from filecmp import cmpfiles
 
 import pytest
 
@@ -255,14 +257,33 @@ def test_execute_compilation(tmpdir, conf, capsys):
     for compiler in conf["compilers"]:
         assert os.path.isfile(str(tmpdir.join("sub")) + "/buffer_" + compiler.name + ".txt")
 
-    # Real shader file with seed
-    tmpdir.mkdir("seed")
+    # Real shader file with seed and without post-processing and copy back the resulting buffers
+    tmpdir.mkdir("nopost")
+    tmpdir.mkdir("copy")
     shutil.copy("testdata/execution_utils/shader_1" + shader_tool.file_extension,
-                str(tmpdir.join("seed")) + "/shader_1" + shader_tool.file_extension)
+                str(tmpdir.join("nopost")) + "/shader_1" + shader_tool.file_extension)
     assert execution_utils.execute_compilation(
-        compilers_dict, conf["exec_dirs"].graphicsfuzz, str(tmpdir.join("seed")),
-        shader_tool, str(tmpdir.join("seed")) + "/shader_1" + shader_tool.file_extension, 0) == [
+        compilers_dict, conf["exec_dirs"].graphicsfuzz, str(tmpdir.join("nopost")),
+        shader_tool, str(tmpdir.join("nopost")) + "/shader_1" + shader_tool.file_extension, 0,
+                     str(tmpdir.join("copy")) + "/", "no_postprocessing") == [
                "no_crash"] * len(compilers_dict)
 
     for compiler in conf["compilers"]:
-        assert os.path.isfile(str(tmpdir.join("seed")) + "/buffer_" + compiler.name + "_0.txt")
+        assert os.path.isfile(str(tmpdir.join("copy")) + "/buffer_" + compiler.name + "_0.txt")
+        assert not os.path.isfile(str(tmpdir.join("nopost")) + "/buffer_" + compiler.name + "_0.txt")
+    assert not os.path.isfile(str(tmpdir.join("nopost")) + "/tmp" + shader_tool.file_extension)
+
+    # Test of the add_id / reduced features
+    tmpdir.mkdir("add_id")
+    shutil.copy("testdata/execution_utils/shader_2" + shader_tool.file_extension,
+                str(tmpdir.join("add_id")) + "/shader_2" + shader_tool.file_extension)
+    assert execution_utils.execute_compilation(
+        compilers_dict, conf["exec_dirs"].graphicsfuzz, str(tmpdir.join("add_id")),
+        shader_tool, str(tmpdir.join("add_id")) + "/shader_2" + shader_tool.file_extension, run_type="add_id") == [
+               "no_crash"] * len(compilers_dict)
+
+    for compiler in conf["compilers"]:
+        assert os.path.isfile(str(tmpdir.join("add_id")) + "/buffer_" + compiler.name + ".txt")
+    assert os.path.isfile(str(tmpdir.join("add_id")) + "/tmp" + shader_tool.file_extension)
+    assert filecmp.cmp("testdata/execution_utils/tmp.shadertrap",
+                       str(tmpdir.join("add_id")) + "/tmp" + shader_tool.file_extension, shallow=False)

@@ -203,26 +203,18 @@ def single_compile(exec_dir, compiler, shader_to_compile, shader_tool, timeout, 
     return not check_passed, False, message if not check_passed else "no_crash"
 
 
-# TODO in the case of double-run, run at least twice the system to check if the ids match
-#  (otherwise, in the case of defects, we might crash on the other compilers
-# Steps
-# Check that file exists -> harness file exists
-# Check post-processing mode
-# Post process file -> post-process harness file exists
-# Compile on all compilers
-# Call single compiler -> buffer_results.txt exist
-# Combine buffers?
 def execute_compilation(compilers_dict, graphicsfuzz, exec_dir, shader_tool, shader_name, output_seed="", move_dir="./",
-                        timeout=10, run_type="standard"):
+                        run_type="standard", timeout=10):
     no_compile_errors = []
     # Verify that the file exists
     if not os.path.isfile(ensure_abs_path(exec_dir, shader_name)):
         print(shader_name + " not found")
         return ["missing"] * len(compilers_dict)
     resulting_buffers = []
+    shader_to_compile = ensure_abs_path(exec_dir, shader_name)
     # Call postprocessing using java if requested
-    shader_to_compile = ensure_abs_path(exec_dir, "tmp" + shader_tool.file_extension)
     if run_type != "no_postprocessing":
+        shader_to_compile = ensure_abs_path(exec_dir, "tmp" + shader_tool.file_extension)
         reconditioned, error = call_glslsmith_reconditioner(graphicsfuzz, exec_dir, str(shader_name),
                                                             shader_to_compile,
                                                             run_type)
@@ -255,7 +247,7 @@ def execute_compilation(compilers_dict, graphicsfuzz, exec_dir, shader_tool, sha
         shutil.move(file_result, ensure_abs_path(exec_dir, "buffer_results.txt"))
         # Recursive call with the reduced number of wrappers
         return execute_compilation(compilers_dict, graphicsfuzz, exec_dir, shader_tool, shader_name, output_seed,
-                                   move_dir, timeout, "reduced")
+                                   move_dir, "reduced", timeout)
 
     # Copy back the results
     if move_dir != "./":

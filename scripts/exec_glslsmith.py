@@ -15,12 +15,12 @@
 import argparse
 import os
 import shutil
+import time
 from subprocess import run
-
 import automate_reducer
 import splitter_merger
 from utils.analysis_utils import comparison_helper
-from utils.execution_utils import execute_compilation, env_setup
+from utils.execution_utils import execute_compilation, call_glslsmith_generator, env_setup
 from utils.file_utils import find_buffer_file, clean_files
 
 
@@ -78,27 +78,15 @@ def main():
         if not ns.diffonly:
             if not ns.nogeneration:
                 # generate programs and seed reporting
-                cmd = [exec_dirs.graphicsfuzz + "glslsmith-generator"]
-                args = r'--shader-count ' + str(
-                    ns.shadercount) + r' --output-directory ' + exec_dirs.shaderoutput
                 if ns.seed != -1:
-                    args += r' --seed ' + str(ns.seed)
-                if ns.host != "shadertrap":
-                    args += r' --printer ' + str(ns.host)
-                cmd += [args]
-
-                process_return = run(cmd, capture_output=True, text=True)
-                if "ERROR" in process_return.stdout:
-                    print("error with glslsmith generator, please fix them before running the script again")
-                    print(process_return.stdout)
-                    return
-                print(process_return.stdout)
-                for line in process_return.stdout.split("\n"):
-                    if "Seed:" in line:
-                        print(line)
-                        seed = int(line.split(':')[1])
-
-                print("Generation of " + str(ns.shadercount) + " shaders done")
+                    seed = ns.seed
+                else:
+                    seed = int(time.time())
+                check, _ = call_glslsmith_generator(exec_dirs.graphicsfuzz, exec_dirs.exec_dir, ns.shadercount,
+                                                    exec_dirs.shaderoutput, seed, ns.host)
+                if not check:
+                    exit(1)
+                print("Generation of " + str(ns.shadercount) + " shaders with seed:" + str(seed) + "done")
                 if ns.generateonly:
                     if ns.glsl_only:
                         for i in range(ns.shadercount):
@@ -121,7 +109,7 @@ def main():
                                 print(ns.shader + " cannot be parsed for post-processing")
                                 exit(1)
                             splitter_merger.split(shader_tool, reconditioned_path, glsl_path)
-                        print("Shaders successfully reconditioned and outputed as glsl")
+                        print("Shaders successfully reconditioned and formatted as glsl")
                     return
 
             # execute actions on generated shaders
@@ -130,7 +118,7 @@ def main():
                 for i in range(ns.shadercount):
                     result = execute_compilation(
                         [compilers_dict.values()[0]], exec_dirs.graphicsfuzz, exec_dirs.exec_dir, shader_tool,
-                        exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension, verbose=True)
+                        exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension)
                     if result[0] != "no_crash":
                         print("Error on shader " + str(i))
                     else:
