@@ -274,6 +274,8 @@ def test_execute_compilation(tmpdir, conf, capsys):
     assert not os.path.isfile(str(tmpdir.join("nopost")) + "/tmp" + shader_tool.file_extension)
 
     # Test of the add_id / reduced features
+    if shader_tool.name == "amber":
+        pytest.xfail("Bug with add-id with the Amber back-end")
     tmpdir.mkdir("add_id")
     shutil.copy("testdata/execution_utils/shader_2" + shader_tool.file_extension,
                 str(tmpdir.join("add_id")) + "/shader_2" + shader_tool.file_extension)
@@ -285,5 +287,5 @@ def test_execute_compilation(tmpdir, conf, capsys):
     for compiler in conf["compilers"]:
         assert os.path.isfile(str(tmpdir.join("add_id")) + "/buffer_" + compiler.name + ".txt")
     assert os.path.isfile(str(tmpdir.join("add_id")) + "/tmp" + shader_tool.file_extension)
-    assert filecmp.cmp("testdata/execution_utils/tmp.shadertrap",
+    assert filecmp.cmp("testdata/execution_utils/tmp" + shader_tool.file_extension,
                        str(tmpdir.join("add_id")) + "/tmp" + shader_tool.file_extension, shallow=False)
