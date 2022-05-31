@@ -14,10 +14,11 @@
 
 import os
 import shutil
+import sys
 
 import pytest
 
-from scripts.stats_shader import find_shader_main_body, report_wrapper_call, print_file_report, stats_shader
+from scripts.stats_shader import find_shader_main_body, report_wrapper_call, print_file_report, stats_shader, main
 from scripts.test.testhelper import load_file
 
 
@@ -63,3 +64,28 @@ class TestStatsShader:
                          "testdata/shader.glsl", "testdata/shader.shadertrap")
             assert e.type == SystemExit
             assert isinstance(e.value.code, str)
+
+    def test_main_missing_buffer(self, conf):
+        # Test with missing buffers
+        script_location = os.getcwd()
+        with pytest.raises(SystemExit) as e:
+            sys.argv = ["stats_shader.py", "--config-file", conf["conf_path"]]
+            main()
+            assert e.type == SystemExit
+            assert e.value.code == 1
+        os.chdir(script_location)
+
+    def test_main(self, conf, capsys, tmpdir):
+        # Test with correct setup
+        script_location = os.getcwd()
+        # TODO make test harness language independent
+        if conf["shadertools"][0].name == "shadertrap":
+            origin_file = "shader_1.shadertrap"
+            location = tmpdir.join(origin_file)
+            shutil.copy("testdata/stats_shader/" + origin_file, location)
+            sys.argv = ["stats_shader.py", "--config-file", conf["conf_path"], "--shader-name", str(location)]
+            main()
+            outputs = capsys.readouterr()
+            assert outputs.out == self.example1_text
+            assert len(os.listdir(tmpdir)) == 1
+        os.chdir(script_location)

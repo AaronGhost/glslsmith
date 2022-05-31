@@ -14,9 +14,8 @@
 
 import argparse
 import re
-from subprocess import run
 
-from scripts.utils.execution_utils import env_setup, collect_process_return, call_glslsmith_reconditioner
+from scripts.utils.execution_utils import env_setup, call_glslsmith_reconditioner
 from scripts.utils.file_utils import clean_files
 from splitter_merger import split
 
@@ -51,7 +50,7 @@ def print_file_report(shader_file):
 
 
 def stats_shader(graphicsfuzz, exec_dir, shader_tool, shader, harness_file):
-    shader_file = r'tmp.glsl'
+    shader_file = exec_dir + r'tmp.glsl'
     # Post-process the shader
     # TODO reformat this with a post-processing function call
     check_passed, message = call_glslsmith_reconditioner(graphicsfuzz, exec_dir, shader, harness_file)
@@ -62,12 +61,11 @@ def stats_shader(graphicsfuzz, exec_dir, shader_tool, shader, harness_file):
 
     # Split the shader from the embedding code
     split(shader_tool, harness_file, shader_file)
-
     # Report the number of lines and bytes in the current code
     print_file_report(shader_file)
 
     # Delete the temp files and the temp shader
-    clean_files("./", [harness_file, shader_file])
+    clean_files(exec_dir, [harness_file, shader_file])
 
 
 def main():
@@ -77,7 +75,7 @@ def main():
     ns, exec_dirs, _, _, shader_tool = env_setup(parser)
 
     harness_file = r'tmp' + shader_tool.file_extension
-    stats_shader(exec_dirs.graphicsfuzz, exec_dirs.execdir, ns.shader_tool, ns.shader, harness_file)
+    stats_shader(exec_dirs.graphicsfuzz, exec_dirs.execdir, shader_tool, ns.shader, harness_file)
 
 
 if __name__ == "__main__":
