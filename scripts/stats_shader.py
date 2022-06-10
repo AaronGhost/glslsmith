@@ -52,7 +52,6 @@ def print_file_report(shader_file):
 def stats_shader(graphicsfuzz, exec_dir, shader_tool, shader, harness_file):
     shader_file = exec_dir + r'tmp.glsl'
     # Post-process the shader
-    # TODO reformat this with a post-processing function call
     check_passed, message = call_glslsmith_reconditioner(graphicsfuzz, exec_dir, shader, harness_file)
     if not check_passed:
         print(shader + " cannot be parsed for post-processing")

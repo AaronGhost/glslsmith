@@ -63,7 +63,7 @@ def main():
                       double_run=ns.double_run, instrumentation=ns.instru)
 
 
-def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool, ref, reduce_timeout,
+def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool, ref, reduce_timeout=False,
                     double_run=False, override_prefix="_reduced", instrumentation=False):
     for file in files_to_reduce:
         # copy file to exec_dir

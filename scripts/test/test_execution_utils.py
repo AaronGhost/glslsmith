@@ -16,7 +16,6 @@ import filecmp
 import os
 import shutil
 import sys
-from filecmp import cmpfiles
 
 import pytest
 

@@ -16,12 +16,131 @@ import argparse
 import os
 import shutil
 import time
-from subprocess import run
 import automate_reducer
 import splitter_merger
-from utils.analysis_utils import comparison_helper
-from utils.execution_utils import execute_compilation, call_glslsmith_generator, env_setup
+from utils.analysis_utils import comparison_helper, attribute_compiler_results
+from utils.execution_utils import execute_compilation, call_glslsmith_generator, env_setup, \
+    call_glslsmith_reconditioner, single_compile
 from utils.file_utils import find_buffer_file, clean_files
+
+
+def validate_compiler(exec_dir, compiler, shader_tool):
+    shutil.copy(os.path.dirname(os.path.realpath(__file__)) + "/empty.shadertrap", exec_dir)
+    crash, timeout, message = single_compile(exec_dir, compiler, exec_dir + "/empty.shadertrap",
+                                             shader_tool)
+    clean_files(exec_dir, ["empty.shadertrap"])
+    if message != "no_crash":
+        print("Error with compiler " + compiler.name)
+        print(message)
+        exit(1)
+
+    return message
+
+
+def glsl_output(exec_dir, graphicsfuzz, shaderoutput, shader_tool, current_seed):
+    # Give the files their seed name
+    reconditioned_path = shaderoutput + "test_" + str(
+        current_seed) + "_re" + shader_tool.file_extension
+    glsl_path = shaderoutput + "test_" + current_seed + "_re" + ".comp"
+    # Recondition the shader
+    check, message = call_glslsmith_reconditioner(graphicsfuzz, exec_dir, shaderoutput + "test_" + str(
+        current_seed) + shader_tool.file_extension, reconditioned_path)
+    if not check:
+        print(message)
+        print("Shader " + current_seed + " cannot be parsed for post-processing")
+        exit(1)
+    splitter_merger.split(shader_tool, reconditioned_path, glsl_path)
+
+
+def syntax_check(compiler, exec_dir, graphicsfuzz, shaderoutput, shader_tool, current_seed):
+    result = execute_compilation(
+        compiler, graphicsfuzz, exec_dir, shader_tool,
+        shaderoutput + "test_" + current_seed + shader_tool.file_extension)
+    if result[0] != "no_crash":
+        print("Error on shader " + current_seed)
+    else:
+        print("Shader " + current_seed + " validated")
+
+
+def write_output_to_file(text, location):
+    with open(location, "r") as f:
+        lines = f.readlines()
+        lines.insert(1, text)
+    with open(location, "w") as f:
+        f.writelines(lines)
+
+
+def save_test_case(exec_dirs, compilers_dict, shader_location, current_seed, shader_tool):
+    # Move test
+    shutil.move(shader_location,
+                exec_dirs.keptshaderdir + current_seed + shader_tool.file_extension)
+
+    # Move buffers
+    for compiler_name in compilers_dict:
+        shutil.move(exec_dirs.dumpbufferdir + "buffer_" + compiler_name + "_" + current_seed + ".txt",
+                    exec_dirs.keptbufferdir + compiler_name + "_" + current_seed + ".txt")
+
+
+def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader_count, syntax_only, reduce, run_type,
+                   glsl_only):
+    # go to generation location
+    if seed != -1:
+        seed = seed
+    else:
+        seed = int(time.time())
+
+    # generate programs and seed reporting
+    check, message = call_glslsmith_generator(exec_dirs.graphicsfuzz, exec_dirs.exec_dir, shader_count,
+                                              exec_dirs.shaderoutput, seed, shader_tool)
+    if not check:
+        print(message)
+        exit(1)
+    print("Generation of " + str(shader_count) + " shaders with seed:" + str(seed) + "done")
+    if glsl_only:
+        for i in range(shader_count):
+            glsl_output(exec_dirs.exec_dir, exec_dirs.graphicsfuzz, exec_dirs.shaderoutput, shader_tool, str(seed + i))
+        print("Shaders successfully reconditioned and formatted as glsl")
+        exit(0)
+
+    # Check the syntax of the generated shader with the first available compiler
+    if syntax_only:
+        # Execute the program with the default implementation
+        first_compiler = list(compilers_dict.values())[0]
+        for i in range(shader_count):
+            syntax_check({first_compiler.name: first_compiler}, exec_dirs.exec_dir, exec_dirs.graphicsfuzz,
+                         exec_dirs.shaderoutput, shader_tool, str(seed + i))
+        # Clean the directory after usage and exit
+        clean_files(exec_dirs.exec_dir, find_buffer_file(exec_dirs.exec_dir))
+        print("Compilation of all programs done")
+        exit(0)
+
+    # Execute program compilation on each compiler and save the results for the batch
+    identified_shaders = []
+    for i in range(shader_count):
+        current_seed = str(seed + i)
+        # Clean the execution platform and execute compilation
+        clean_files(exec_dirs, find_buffer_file(exec_dirs.exec_dir))
+        shader_location = exec_dirs.shaderoutput + "test_" + current_seed + shader_tool.file_extension
+        _ = execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, exec_dirs.exec_dir, shader_tool,
+                                shader_location,
+                                current_seed, exec_dirs.dumpbufferdir, run_type)
+
+        # Compare outputs and save buffers
+        # Reference buffers for a given shader instance
+        buffers_files = []
+        for compiler_name in compilers_dict:
+            buffers_files.append(exec_dirs.dumpbufferdir + "buffer_" + compiler_name + "_" + current_seed + ".txt")
+        # Compare and check back the results
+        values = comparison_helper(buffers_files)
+        if len(values) != 1:
+            print("Differences on shader: " + current_seed)
+            identified_shaders.append(exec_dirs.keptshaderdir + current_seed + shader_tool.file_extension)
+            write_output_to_file(attribute_compiler_results(values, compilers_dict) + "\n", shader_location)
+            save_test_case(exec_dirs, compilers_dict, shader_location, current_seed, shader_tool)
+
+    # reduce with the default reducer if specified
+    if reduce:
+        automate_reducer.batch_reduction(reducer, compilers_dict, exec_dirs, identified_shaders, shader_tool, -1)
 
 
 def main():
@@ -33,172 +152,34 @@ def main():
     parser.add_argument('--syntax-only', dest='syntaxonly', action='store_true',
                         help="Compile only the first compiler of the provided list to verify the syntax through "
                              "ShaderTrap")
-    parser.add_argument('--generate-only', dest='generateonly', action='store_true',
-                        help="Only generate shaders without doing differential testing")
-    parser.add_argument('--no-generation', dest='nogeneration', action='store_true',
-                        help="Performs execution and differential testing on already provided files")
-    parser.add_argument('--diff-files-only', dest='diffonly', action='store_true',
-                        help="Only compare already written buffer outputs")
-    parser.add_argument('--no-compiler-validation', dest='validatecompilers', action='store_false',
-                        help="Deactivate the compiler validation at beginning of the batch execution")
     parser.add_argument('--continuous', dest='continuous', action='store_true',
                         help="Launch the bug finding in never ending mode")
     parser.add_argument('--reduce', dest="reduce", action="store_true",
                         help="Reduce interesting shaders at the end of a batch")
     parser.add_argument("--reducer", dest="reducer", default="glsl-reduce",
                         help="Enforce the reducer if reduction is applied, see --reduce")
-    parser.add_argument('--reduce-timeout', dest="timeout", action="store_true",
-                        help="Force the reducer to consider reduction of shaders that time out (DISCOURAGED)")
     parser.add_argument('--double_run', dest='double_run', action='store_true',
                         help="Run the reconditioning step twice, reducing the number of wrappers on the second run")
-    parser.add_argument('--verbose', dest='verbose', action='store_true',
-                        help="Provide more logging information about the executed command")
     parser.add_argument('--glsl-only', dest="glsl_only", action="store_true",
                         help="Generate the files, recondition them on the go and split out the glsl shader out of the "
                              "harness")
 
     ns, exec_dirs, compilers_dict, reducer, shader_tool = env_setup(parser)
-
-    # temp value for compiler validation (not revalidating on loops)
-    validate_compilers = ns.validatecompilers
-
-    if ns.glsl_only:
-        ns.generateonly = True
-        ns.validatecompilers = False
-        ns.reduce = False
-        ns.double_run = False
-
     batch_nb = 1
-    # go to generation location
-    seed = 0
-    if ns.seed != -1:
-        seed = ns.seed
+
+    # Validate compilers on an empty program instance
+    if shader_tool.name != "shadertrap":
+        print("Impossible to validate the compilers if the host language is not shadertrap")
+    else:
+        for compiler in compilers_dict.values():
+            validate_compiler(exec_dirs.exec_dir, compiler, shader_tool)
+        print("Compilers validated")
 
     while batch_nb == 1 or ns.continuous:
-        if not ns.diffonly:
-            if not ns.nogeneration:
-                # generate programs and seed reporting
-                if ns.seed != -1:
-                    seed = ns.seed
-                else:
-                    seed = int(time.time())
-                check, _ = call_glslsmith_generator(exec_dirs.graphicsfuzz, exec_dirs.exec_dir, ns.shadercount,
-                                                    exec_dirs.shaderoutput, seed, ns.host)
-                if not check:
-                    exit(1)
-                print("Generation of " + str(ns.shadercount) + " shaders with seed:" + str(seed) + "done")
-                if ns.generateonly:
-                    if ns.glsl_only:
-                        for i in range(ns.shadercount):
-                            # Give the files their seed name
-                            definitive_path = exec_dirs.shaderoutput + "test_" + str(
-                                seed + i) + shader_tool.file_extension
-                            reconditioned_path = exec_dirs.shaderoutput + "test_" + str(
-                                seed + i) + "_re" + shader_tool.file_extension
-                            glsl_path = exec_dirs.shaderoutput + "test_" + str(seed + i) + "_re" + ".comp"
-                            shutil.move(exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
-                                        exec_dirs.shaderoutput + "test_" + str(seed + i) + shader_tool.file_extension)
-                            # Post process the shader
-                            cmd = [exec_dirs.graphicsfuzz + "glslsmith-recondition"]
-                            args = r'--src ' + str(definitive_path) + r' --dest ' + reconditioned_path
-                            cmd += [args]
-                            process_return = run(cmd, capture_output=True, text=True)
-                            if "SUCCESS!" not in process_return.stdout:
-                                print(process_return.stderr)
-                                print(process_return.stdout)
-                                print(ns.shader + " cannot be parsed for post-processing")
-                                exit(1)
-                            splitter_merger.split(shader_tool, reconditioned_path, glsl_path)
-                        print("Shaders successfully reconditioned and formatted as glsl")
-                    return
-
-            # execute actions on generated shaders
-            if ns.syntaxonly:
-                # Execute the program with the default implementation
-                for i in range(ns.shadercount):
-                    result = execute_compilation(
-                        [compilers_dict.values()[0]], exec_dirs.graphicsfuzz, exec_dirs.exec_dir, shader_tool,
-                        exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension)
-                    if result[0] != "no_crash":
-                        print("Error on shader " + str(i))
-                    else:
-                        print("Shader " + str(i) + " validated")
-                # Clean the directory after usage and exit
-                buffers = find_buffer_file(os.getcwd())
-                clean_files(os.getcwd(), buffers)
-                print("Compilation of all programs done")
-                return
-
-            # Validate compilers on an empty program instance
-            if validate_compilers:
-                if shader_tool.name != "shadertrap":
-                    print("Impossible to validate the compilers if the host language is not shadertrap")
-                else:
-                    for compiler in compilers_dict.values():
-                        if compiler.type == "android":
-                            run(["adb", "push", "scripts/empty.shadertrap", "/data/local/tmp/test.shadertrap"],
-                                capture_output=True, text=True)
-                            # The Android ShaderTrap binary is assumed to be present at /data/local/tmp
-
-                            process_return = run(["adb", "shell", "/data/local/tmp/shadertrap", "--show-gl-info",
-                                                  "--require-vendor-renderer-substring",
-                                                  compiler.renderer, "/data/local/tmp/test.shadertrap"],
-                                                 capture_output=True, text=True)
-                            run(["adb", "shell", "rm", "/data/local/tmp/test.shadertrap"])
-                        else:
-                            cmd_ending = [shader_tool.path, "--show-gl-info", "--require-vendor-renderer-substring",
-                                          compiler.renderer, "scripts/empty.shadertrap"]
-                            cmd = compiler.build_exec_env() + cmd_ending
-                            process_return = run(cmd, capture_output=True, text=True)
-                            buffers = find_buffer_file(os.getcwd())
-                            clean_files(os.getcwd(), buffers)
-                        if compiler.renderer not in process_return.stdout:
-                            print("compiler not found or not working: " + compiler.name)
-                            print(process_return.stdout)
-                            print(process_return.stderr)
-                            return
-                    print("compilers validated")
-                    validate_compilers = False
-
-            buffers = find_buffer_file(exec_dirs.dumpbufferdir)
-            clean_files(exec_dirs.dumpbufferdir, buffers)
-            # Execute program compilation on each compiler and save the results for the batch
-            for i in range(ns.shadercount):
-                execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, exec_dirs.exec_dir, shader_tool,
-                                    exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
-                                    str(i), exec_dirs.dumpbufferdir, verbose=ns.verbose,
-                                    double_run=ns.double_run, postprocessing=True)
-        # Compare outputs and save buffers
-        # Check that we can compare outputs across multiple compilers
-        if len(compilers_dict) == 1:
-            print("Impossible to compare outputs for only one compiler")
-            return
-        identified_shaders = []
-        for i in range(ns.shadercount):
-            # Reference buffers for a given shader instance
-            buffers_files = []
-            for compiler_name in compilers_dict:
-                buffers_files.append(exec_dirs.dumpbufferdir + "buffer_" + compiler_name + "_" + str(i) + ".txt")
-            # Compare and check back the results
-            values = comparison_helper(buffers_files)
-            if len(values) != 1:
-                print("Different results across implementations for shader " + str(seed + i))
-                # Move shader
-                identified_shaders.append(str(seed + i) + shader_tool.file_extension)
-                shutil.move(exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
-                            exec_dirs.keptshaderdir + str(seed + i) + shader_tool.file_extension)
-                # Move buffers
-                for compiler_name in compilers_dict:
-                    shutil.move(exec_dirs.dumpbufferdir + "buffer_" + compiler_name + "_" + str(i) + ".txt",
-                                exec_dirs.keptbufferdir + compiler_name + "_" + str(seed + i) + ".txt")
-
-        # reduce with the default reducer if specified
-        if ns.reduce:
-            automate_reducer.batch_reduction(reducer, compilers_dict, exec_dirs, identified_shaders, shader_tool, -1,
-                                             ns.timeout)
-        # Set flag for while loop and print the number of batch
-        print("Batch " + str(batch_nb) + " processed")
+        print("Batch " + str(batch_nb))
         batch_nb += 1
+        exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, ns.seed, ns.shader_count, ns.syntaxonly,
+                       ns.reduce, ns.double_run, ns.glsl_only)
 
 
 if __name__ == "__main__":
