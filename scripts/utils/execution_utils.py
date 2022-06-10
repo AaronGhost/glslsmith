@@ -129,7 +129,7 @@ def call_glslsmith_reconditioner(graphicsfuzz, exec_dir, shader, harness, run_ty
     return collect_process_return(subprocess.run(cmd, capture_output=True, text=True), "SUCCESS!")
 
 
-def single_compile(exec_dir, compiler, shader_to_compile, shader_tool, timeout, run_type, verbose=False):
+def single_compile(exec_dir, compiler, shader_to_compile, shader_tool, timeout=10, run_type="standard", verbose=False):
     previous_location = os.getcwd()
     os.chdir(exec_dir)
     try:
@@ -239,15 +239,16 @@ def execute_compilation(compilers_dict, graphicsfuzz, exec_dir, shader_tool, sha
         no_compile_errors.append(message)
         shutil.move(ensure_abs_path(exec_dir, "buffer_results.txt"), file_result)
 
-    # Compare the different buffers obtained from the compilation
-    compiler_results = comparison_helper(resulting_buffers)
+    # Compare the different buffers obtained from the compilation if we need to rerun
+    if run_type == "add_id":
+        compiler_results = comparison_helper(resulting_buffers)
 
-    # If the results are identical we can try the reduced wrappers version
-    if len(compiler_results) == 1 and run_type == "add_id":
-        shutil.move(file_result, ensure_abs_path(exec_dir, "buffer_results.txt"))
-        # Recursive call with the reduced number of wrappers
-        return execute_compilation(compilers_dict, graphicsfuzz, exec_dir, shader_tool, shader_name, output_seed,
-                                   move_dir, "reduced", timeout)
+        # If the results are identical we can try the reduced wrappers version
+        if len(compiler_results) == 1:
+            shutil.move(file_result, ensure_abs_path(exec_dir, "buffer_results.txt"))
+            # Recursive call with the reduced number of wrappers
+            return execute_compilation(compilers_dict, graphicsfuzz, exec_dir, shader_tool, shader_name, output_seed,
+                                       move_dir, "reduced", timeout)
 
     # Copy back the results
     if move_dir != "./":
