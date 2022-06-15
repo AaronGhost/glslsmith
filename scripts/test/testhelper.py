@@ -15,3 +15,15 @@
 def load_file(filename):
     with open("testdata/" + filename, "r") as file:
         return file.read()
+
+
+def compare_files(file_name, ref_name):
+    assert [row for row in open(file_name)] == [row for row in open(ref_name)]
+
+
+def restrict_compilers(compiler_dict, name_list):
+    resulting_compilers = dict()
+    for name in name_list:
+        if name in compiler_dict:
+            resulting_compilers[name] = compiler_dict[name]
+    return resulting_compilers

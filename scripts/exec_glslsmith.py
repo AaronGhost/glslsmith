@@ -70,19 +70,20 @@ def write_output_to_file(text, location):
         f.writelines(lines)
 
 
-def save_test_case(exec_dirs, compilers_dict, shader_location, current_seed, shader_tool):
+def save_test_case(kept_shader_dir, dump_buffer_dir, kept_buffer_dir, compilers_dict, shader_location, current_seed,
+                   shader_tool):
     # Move test
     shutil.move(shader_location,
-                exec_dirs.keptshaderdir + current_seed + shader_tool.file_extension)
+                kept_shader_dir + current_seed + shader_tool.file_extension)
 
     # Move buffers
     for compiler_name in compilers_dict:
-        shutil.move(exec_dirs.dumpbufferdir + "buffer_" + compiler_name + "_" + current_seed + ".txt",
-                    exec_dirs.keptbufferdir + compiler_name + "_" + current_seed + ".txt")
+        shutil.move(dump_buffer_dir + "buffer_" + compiler_name + "_" + current_seed + ".txt",
+                    kept_buffer_dir + compiler_name + "_" + current_seed + ".txt")
 
 
-def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader_count, syntax_only, reduce, run_type,
-                   glsl_only):
+def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader_count, syntax_only=False, reduce=False,
+                   run_type="standard", glsl_only=False):
     # go to generation location
     if seed != -1:
         seed = seed
@@ -90,7 +91,7 @@ def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader
         seed = int(time.time())
 
     # generate programs and seed reporting
-    check, message = call_glslsmith_generator(exec_dirs.graphicsfuzz, exec_dirs.exec_dir, shader_count,
+    check, message = call_glslsmith_generator(exec_dirs.graphicsfuzz, exec_dirs.execdir, shader_count,
                                               exec_dirs.shaderoutput, seed, shader_tool)
     if not check:
         print(message)
@@ -98,7 +99,7 @@ def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader
     print("Generation of " + str(shader_count) + " shaders with seed:" + str(seed) + "done")
     if glsl_only:
         for i in range(shader_count):
-            glsl_output(exec_dirs.exec_dir, exec_dirs.graphicsfuzz, exec_dirs.shaderoutput, shader_tool, str(seed + i))
+            glsl_output(exec_dirs.execdir, exec_dirs.graphicsfuzz, exec_dirs.shaderoutput, shader_tool, str(seed + i))
         print("Shaders successfully reconditioned and formatted as glsl")
         exit(0)
 
@@ -107,10 +108,12 @@ def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader
         # Execute the program with the default implementation
         first_compiler = list(compilers_dict.values())[0]
         for i in range(shader_count):
-            syntax_check({first_compiler.name: first_compiler}, exec_dirs.exec_dir, exec_dirs.graphicsfuzz,
+            syntax_check({first_compiler.name: first_compiler}, exec_dirs.execdir, exec_dirs.graphicsfuzz,
                          exec_dirs.shaderoutput, shader_tool, str(seed + i))
         # Clean the directory after usage and exit
-        clean_files(exec_dirs.exec_dir, find_buffer_file(exec_dirs.exec_dir))
+        clean_files(exec_dirs.execdir, find_buffer_file(exec_dirs.execdir))
+        clean_files(exec_dirs.execdir, ["tmp" + shader_tool.file_extension])
+
         print("Compilation of all programs done")
         exit(0)
 
@@ -119,9 +122,10 @@ def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader
     for i in range(shader_count):
         current_seed = str(seed + i)
         # Clean the execution platform and execute compilation
-        clean_files(exec_dirs, find_buffer_file(exec_dirs.exec_dir))
+        clean_files(exec_dirs.execdir, find_buffer_file(exec_dirs.execdir))
+        clean_files(exec_dirs.execdir, ["tmp" + shader_tool.file_extension])
         shader_location = exec_dirs.shaderoutput + "test_" + current_seed + shader_tool.file_extension
-        _ = execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, exec_dirs.exec_dir, shader_tool,
+        _ = execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, exec_dirs.execdir, shader_tool,
                                 shader_location,
                                 current_seed, exec_dirs.dumpbufferdir, run_type)
 
@@ -135,8 +139,12 @@ def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader
         if len(values) != 1:
             print("Differences on shader: " + current_seed)
             identified_shaders.append(exec_dirs.keptshaderdir + current_seed + shader_tool.file_extension)
-            write_output_to_file(attribute_compiler_results(values, compilers_dict) + "\n", shader_location)
-            save_test_case(exec_dirs, compilers_dict, shader_location, current_seed, shader_tool)
+            write_output_to_file("# " + attribute_compiler_results(values, compilers_dict) + "\n", shader_location)
+            save_test_case(exec_dirs.keptshaderdir, exec_dirs.dumpbufferdir, exec_dirs.keptbufferdir, compilers_dict,
+                           shader_location, current_seed, shader_tool)
+
+    clean_files(exec_dirs.execdir, find_buffer_file(exec_dirs.execdir))
+    clean_files(exec_dirs.execdir, ["tmp" + shader_tool.file_extension])
 
     # reduce with the default reducer if specified
     if reduce:
