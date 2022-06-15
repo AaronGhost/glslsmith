@@ -58,3 +58,26 @@ def compilers_dict():
             "e": Compiler("e", "e", "independent", "en/", "end.json", ["WHATEVER=\"indep\"", "X=\"y\""]),
             "f": Compiler("f", "f", "angle", "en/", " ", ["WHATEVER=\"ang\"", "X=\"z\""]),
             "g": Compiler("g", "g", "angle", " ", "ga.json", [])}
+
+
+def load_file(filename):
+    with open("testdata/" + filename, "r") as file:
+        return file.read()
+
+
+def compare_files(file_name, ref_name):
+    file_rows = open(file_name).readlines()
+    ref_rows = open(ref_name).readlines()
+    row_index = 0
+    for row in file_rows:
+        assert row == ref_rows[row_index]
+        row_index += 1
+    assert len(ref_rows) == len(file_rows)
+
+
+def restrict_compilers(compiler_dict, name_list):
+    resulting_compilers = dict()
+    for name in name_list:
+        if name in compiler_dict:
+            resulting_compilers[name] = compiler_dict[name]
+    return resulting_compilers

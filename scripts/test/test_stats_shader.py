@@ -19,7 +19,7 @@ import sys
 import pytest
 
 from scripts.stats_shader import find_shader_main_body, report_wrapper_call, print_file_report, stats_shader, main
-from scripts.test.testhelper import load_file
+from scripts.test.conftest import load_file
 
 
 class TestStatsShader:

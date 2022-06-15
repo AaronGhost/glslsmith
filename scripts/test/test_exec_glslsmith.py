@@ -1,13 +1,11 @@
 import os.path
 import shutil
-from unittest.mock import MagicMock
 
 import pytest
 from scripts.exec_glslsmith import write_output_to_file, glsl_output, validate_compiler, syntax_check, save_test_case, \
     exec_glslsmith
-from scripts.test.testhelper import compare_files, restrict_compilers
+from scripts.test.conftest import compare_files, restrict_compilers
 from scripts.utils.Compiler import Compiler
-from scripts.utils.Reducer import Reducer
 from scripts.utils.ShaderTool import ShaderTool
 from scripts.utils.execution_utils import build_compiler_dict
 

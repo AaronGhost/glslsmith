@@ -19,7 +19,7 @@ import pytest
 
 from scripts.splitter_merger import get_glslcode_from_shadertrap, get_glslcode, split, merge, get_glslcode_from_amber, \
     main
-from scripts.test.testhelper import load_file
+from scripts.test.conftest import load_file
 from scripts.utils.ShaderTool import ShaderTool
 
 
