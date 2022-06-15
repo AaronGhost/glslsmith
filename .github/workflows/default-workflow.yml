@@ -94,7 +94,7 @@ jobs:
       
       - name: Tests with Shadertrap back-end
         run: |
-         cd scripts && python -m pytest --cov --ignore graphicsfuzz -q --config_file=$GITHUB_WORKSPACE/.github/workflows/shadertrap_config.xml
+         cd scripts && python -m pytest --cov --ignore graphicsfuzz --config_file=$GITHUB_WORKSPACE/.github/workflows/shadertrap_config.xml
          
       # Amber Testing
       - name: Install Amber
@@ -111,4 +111,4 @@ jobs:
 
       - name: Test with Amber back-end
         run: |
-          cd scripts && python -m pytest --cov --cov-append --ignore graphicsfuzz -q --config_file=$GITHUB_WORKSPACE/.github/workflows/amber_config.xml
+          cd scripts && python -m pytest --cov --cov-append --ignore graphicsfuzz --config_file=$GITHUB_WORKSPACE/.github/workflows/amber_config.xml
