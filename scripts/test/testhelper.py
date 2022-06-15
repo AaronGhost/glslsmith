@@ -18,7 +18,13 @@ def load_file(filename):
 
 
 def compare_files(file_name, ref_name):
-    assert [row for row in open(file_name)] == [row for row in open(ref_name)]
+    file_rows = open(file_name).readlines()
+    ref_rows = open(ref_name).readlines()
+    row_index = 0
+    for row in file_rows:
+        assert row == ref_rows[row_index]
+        row_index += 1
+    assert len(ref_rows) == len(file_rows)
 
 
 def restrict_compilers(compiler_dict, name_list):
