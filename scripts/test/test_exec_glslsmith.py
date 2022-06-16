@@ -1,13 +1,16 @@
+import copy
 import os.path
 import shutil
+import sys
 
 import pytest
 from scripts.exec_glslsmith import write_output_to_file, glsl_output, validate_compiler, syntax_check, save_test_case, \
-    exec_glslsmith
+    exec_glslsmith, main
 from scripts.test.conftest import compare_files, restrict_compilers
 from scripts.utils.Compiler import Compiler
 from scripts.utils.ShaderTool import ShaderTool
 from scripts.utils.execution_utils import build_compiler_dict
+from scripts.utils.file_utils import ensure_abs_path, clean_files
 
 
 def test_validate_compiler(tmpdir, conf):
@@ -98,17 +101,18 @@ def test_save_test_case(tmpdir, compilers_dict):
 
 
 def prepare_tmp_env(execdirs, tmpdir):
+    tmp_execdirs = copy.copy(execdirs)
     tmpdir.mkdir("execdir")
-    execdirs.execdir = str(tmpdir.join("execdir")) + "/"
+    tmp_execdirs.execdir = str(tmpdir.join("execdir")) + "/"
     tmpdir.mkdir("shaderoutput")
-    execdirs.shaderoutput = str(tmpdir.join("shaderoutput")) + "/"
+    tmp_execdirs.shaderoutput = str(tmpdir.join("shaderoutput")) + "/"
     tmpdir.mkdir("keptshaders")
-    execdirs.keptshaderdir = str(tmpdir.join("keptshaders")) + "/"
+    tmp_execdirs.keptshaderdir = str(tmpdir.join("keptshaders")) + "/"
     tmpdir.mkdir("bufferoutput")
-    execdirs.dumpbufferdir = str(tmpdir.join("bufferoutput")) + "/"
+    tmp_execdirs.dumpbufferdir = str(tmpdir.join("bufferoutput")) + "/"
     tmpdir.mkdir("keptbuffers")
-    execdirs.keptbufferdir = str(tmpdir.join("keptbuffers")) + "/"
-    return execdirs
+    tmp_execdirs.keptbufferdir = str(tmpdir.join("keptbuffers")) + "/"
+    return tmp_execdirs
 
 
 def test_exec_glslsmith_options(tmpdir, conf, capsys):
@@ -139,7 +143,7 @@ def test_exec_glslsmith_options(tmpdir, conf, capsys):
     # Test on normal case without difference
     exec_glslsmith(execdirs, build_compiler_dict(conf["compilers"]), conf["reducers"][0],
                    conf["shadertools"][0], 0, 2)
-    assert len(os.listdir(tmpdir.join("bufferoutput"))) == 2*len(conf["compilers"])
+    assert len(os.listdir(tmpdir.join("bufferoutput"))) == 2 * len(conf["compilers"])
     assert len(os.listdir(tmpdir.join("execdir"))) == 0
 
 
@@ -162,3 +166,59 @@ def test_exec_glslsmith_force_diff_files(mocker, conf, tmpdir):
                    conf["shadertools"][0], 0, 1)
     assert os.path.isfile(tmpdir.join("keptshaders/0" + conf["shadertools"][0].file_extension))
     assert len(os.listdir(tmpdir.join("keptbuffers"))) == len(conf["compilers"])
+
+
+def test_main(conf, tmpdir, capsys):
+    print(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].dumpbufferdir))
+    script_location = os.getcwd()
+    try:
+        for compiler in conf["compilers"]:
+            print(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].dumpbufferdir))
+            clean_files(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].dumpbufferdir),
+                        ["buffer_" + compiler.name + "_0.txt", "buffer_" + compiler.name + "_1.txt"])
+        file_extension = conf["shadertools"][0].file_extension
+        # Test on glsl-only + constrained seed
+        with pytest.raises(SystemExit) as e:
+            sys.argv = ["exec_glslsmith.py", "--seed", str(0), "--shader-count", str(1), "--glsl-only"]
+            main()
+            assert e.type == SystemExit
+            assert e.value.code == 0
+            assert os.path.isfile(
+                ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].shaderoutput) + "/test_0_re.comp")
+            assert os.path.isfile(
+                ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].shaderoutput) + "/test_1_re.comp")
+            capsys.readouterr()
+        clean_files(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].shaderoutput),
+                    ["test_0_re.comp", "test_1_re.comp", "test_0" + file_extension, "test_1" + file_extension,
+                     "test_0_re" + conf["shadertools"][0].file_extension,
+                     "test_1_re" + conf["shadertools"][0].file_extension])
+        os.chdir(script_location)
+
+        # Test on syntax-only
+        with pytest.raises(SystemExit) as e:
+            sys.argv = ["exec_glslsmith.py", "--seed", str(0), "--shader-count", str(1), "--syntax-only"]
+            main()
+            assert e.type == SystemExit
+            assert e.value.code == 0
+            syntax_outputs = capsys.readouterr().out
+            assert "Shader 0 validated" in syntax_outputs
+            assert "Shader 1 validated" in syntax_outputs
+        os.chdir(script_location)
+        clean_files(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].shaderoutput),
+                    ["test_0" + file_extension, "test_1" + file_extension])
+        for compiler in conf["compilers"]:
+            clean_files(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].dumpbufferdir),
+                        ["buffer_" + compiler.name + "_0.txt", "buffer_" + compiler.name + "_1.txt"])
+
+        # Test on normal case without difference
+        sys.argv = ["exec_glslsmith.py", "--shader-count", str(2), "--seed", str(0)]
+        main()
+        os.chdir(script_location)
+        for compiler in conf["compilers"]:
+            assert os.path.isfile(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].dumpbufferdir) +
+                                  "buffer_" + compiler.name + "_0.txt")
+            assert os.path.isfile(ensure_abs_path(conf["exec_dirs"].execdir,
+                                                  conf[
+                                                      "exec_dirs"].dumpbufferdir) + "buffer_" + compiler.name + "_1.txt")
+    finally:
+        os.chdir(script_location)

@@ -154,7 +154,7 @@ def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader
 def main():
     # Parse arguments
     parser = argparse.ArgumentParser(description="Execute GLSLsmith framework and sort results")
-    parser.add_argument('--seed', dest='seed', default=-1, help="Seed the random generator of GLSLsmith")
+    parser.add_argument('--seed', dest='seed', default=-1, type=int, help="Seed the random generator of GLSLsmith")
     parser.add_argument('--shader-count', dest='shadercount', default=50, type=int,
                         help="Specify the number of test per batch")
     parser.add_argument('--syntax-only', dest='syntaxonly', action='store_true',
@@ -180,13 +180,13 @@ def main():
         print("Impossible to validate the compilers if the host language is not shadertrap")
     else:
         for compiler in compilers_dict.values():
-            validate_compiler(exec_dirs.exec_dir, compiler, shader_tool)
+            validate_compiler(exec_dirs.execdir, compiler, shader_tool)
         print("Compilers validated")
 
     while batch_nb == 1 or ns.continuous:
         print("Batch " + str(batch_nb))
         batch_nb += 1
-        exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, ns.seed, ns.shader_count, ns.syntaxonly,
+        exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, ns.seed, ns.shadercount, ns.syntaxonly,
                        ns.reduce, ns.double_run, ns.glsl_only)
 
 
