@@ -179,7 +179,8 @@ def test_main(conf, tmpdir, capsys):
         file_extension = conf["shadertools"][0].file_extension
         # Test on glsl-only + constrained seed
         with pytest.raises(SystemExit) as e:
-            sys.argv = ["exec_glslsmith.py", "--seed", str(0), "--shader-count", str(1), "--glsl-only"]
+            sys.argv = ["exec_glslsmith.py", "--seed", str(0), "--shader-count", str(1), "--glsl-only", "--config-file",
+                        conf["conf_path"]]
             main()
             assert e.type == SystemExit
             assert e.value.code == 0
@@ -196,7 +197,9 @@ def test_main(conf, tmpdir, capsys):
 
         # Test on syntax-only
         with pytest.raises(SystemExit) as e:
-            sys.argv = ["exec_glslsmith.py", "--seed", str(0), "--shader-count", str(1), "--syntax-only"]
+            sys.argv = ["exec_glslsmith.py", "--seed", str(0), "--shader-count", str(1), "--syntax-only",
+                        "--config-file",
+                        conf["conf_path"]]
             main()
             assert e.type == SystemExit
             assert e.value.code == 0
@@ -211,7 +214,7 @@ def test_main(conf, tmpdir, capsys):
                         ["buffer_" + compiler.name + "_0.txt", "buffer_" + compiler.name + "_1.txt"])
 
         # Test on normal case without difference
-        sys.argv = ["exec_glslsmith.py", "--shader-count", str(2), "--seed", str(0)]
+        sys.argv = ["exec_glslsmith.py", "--shader-count", str(2), "--seed", str(0), "--config-file", conf["conf_path"]]
         main()
         os.chdir(script_location)
         for compiler in conf["compilers"]:
