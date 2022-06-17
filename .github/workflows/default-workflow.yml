@@ -59,7 +59,6 @@ jobs:
       
       - name: Build GraphicsFuzz
         run: cd graphicsfuzz && mvn -Dmaven.test.skip=true install
-      
 
       # llvmpipe
       - name: Install mesa dependencies
@@ -87,6 +86,10 @@ jobs:
         run:
           cp ~/angle/lib/libEGL.so ~/angle/lib/libEGL.so.1
 
+      # Install the project
+      - name: Prepare directories
+        run: mkdir glslsmithoutput/ glslsmithoutput/shaders glslsmithoutput/buffers glslsmithoutput/keptshaders glslsmithoutput/keptbuffers
+
       # Shadertrap Testing
       - name: Install Shadertrap
         run: |
@@ -110,5 +113,6 @@ jobs:
           echo "VK_ICD_FILENAMES=/home/runner/llvmpipe/install/share/vulkan/icd.d/lvp_icd.x86_64.json" >> $GITHUB_ENV
 
       - name: Test with Amber back-end
+        if: always()
         run: |
           cd scripts && python -m pytest --cov --cov-append --ignore graphicsfuzz --config_file=$GITHUB_WORKSPACE/.github/workflows/amber_config.xml
