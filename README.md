@@ -1,3 +1,5 @@
+![Tests](https://github.com/AaronGhost/glslsmith/actions/workflows/default-workflow.yml/badge.svg)
+
 # glslsmith
 
 glslsmith is a random shader generator developed to find bugs in GLSL compilers.
