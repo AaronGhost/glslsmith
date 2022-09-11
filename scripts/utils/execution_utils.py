@@ -25,8 +25,8 @@ from utils.Reducer import Reducer
 from utils.ShaderTool import ShaderTool
 from utils.file_utils import find_buffer_file, clean_files, concatenate_files
 
-from scripts.utils.analysis_utils import comparison_helper
-from scripts.utils.file_utils import find_digit_buffer_file, ensure_abs_path
+from utils.analysis_utils import comparison_helper
+from utils.file_utils import find_digit_buffer_file, ensure_abs_path
 
 
 def build_compiler_dict(compilers, restrict_compilers=None):
