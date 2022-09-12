@@ -71,8 +71,8 @@ class TestStatsShader:
         with pytest.raises(SystemExit) as e:
             sys.argv = ["stats_shader.py", "--config-file", conf["conf_path"]]
             main()
-            assert e.type == SystemExit
-            assert e.value.code == 1
+        assert e.type == SystemExit
+        assert e.value.code == 1
         os.chdir(script_location)
 
     def test_main(self, conf, capsys, tmpdir):
