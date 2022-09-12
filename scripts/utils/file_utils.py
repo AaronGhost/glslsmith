@@ -60,7 +60,7 @@ def find_test_file(current_dir):  # pragma: no cover
 
 
 def get_compiler_name(buffer_name):
-    return buffer_name.split("/")[-1].rsplit("_", 1)[0]
+    return buffer_name.split("/")[-1].rsplit("_", 1)[0].removeprefix("buffer_")
 
 
 def get_seed(buffer_name):

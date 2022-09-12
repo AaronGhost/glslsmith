@@ -96,7 +96,7 @@ def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader
     if not check:
         print(message)
         exit(1)
-    print("Generation of " + str(shader_count) + " shaders with seed:" + str(seed) + "done")
+    print("Generation of " + str(shader_count) + " shaders with seed:" + str(seed) + " done")
     if glsl_only:
         for i in range(shader_count):
             glsl_output(exec_dirs.execdir, exec_dirs.graphicsfuzz, exec_dirs.shaderoutput, shader_tool, str(seed + i))
@@ -134,12 +134,15 @@ def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader
         buffers_files = []
         for compiler_name in compilers_dict:
             buffers_files.append(exec_dirs.dumpbufferdir + "buffer_" + compiler_name + "_" + current_seed + ".txt")
-        # Compare and check back the results
+        # Compare and check back the results from the buffers
         values = comparison_helper(buffers_files)
         if len(values) != 1:
             print("Differences on shader: " + current_seed)
+            # Register the shader for eventual reduction
             identified_shaders.append(exec_dirs.keptshaderdir + current_seed + shader_tool.file_extension)
+            # Add a name comment in the shader to identify easily the responsible compiler(s)
             write_output_to_file("# " + attribute_compiler_results(values, compilers_dict) + "\n", shader_location)
+            # Save the relevant buffers and shaders
             save_test_case(exec_dirs.keptshaderdir, exec_dirs.dumpbufferdir, exec_dirs.keptbufferdir, compilers_dict,
                            shader_location, current_seed, shader_tool)
 
