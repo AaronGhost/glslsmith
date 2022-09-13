@@ -40,8 +40,7 @@ def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref, 
     # Execute the host file with the different drivers
     clean_files(os.getcwd(), find_buffer_file(os.getcwd()))
     compilers = list(compilers_dict.values())
-    results = execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, exec_dirs.exec_dir, shader_tool, shader_name,
-                                  verbose=True, double_run=double_run, postprocessing=postprocessing)
+    results = execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, exec_dirs.execdir, shader_tool, shader_name)
     if clean_dir:
         clean_files(os.getcwd(), ["tmp" + shader_tool.file_extension])
     crash_flag = False
@@ -87,7 +86,7 @@ def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref, 
             clean_and_exit(str(4000) + " " + str(comparison_result), clean_dir)
         if group_compiler in compilers_dict:
             clean_and_exit(str(3000 + (1 << compilers_dict[group_compiler].compilercode)), clean_dir)
-        clean_and_exit(str("Unrecognized compiler: " + group_compiler))
+        clean_and_exit(str("Unrecognized compiler: " + group_compiler), clean_dir)
     else:
         if clean_dir:
             clean_files(os.getcwd(), find_buffer_file(os.getcwd()))

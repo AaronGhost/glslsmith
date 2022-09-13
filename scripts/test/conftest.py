@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import copy
 
 import pytest
 
@@ -81,3 +82,18 @@ def restrict_compilers(compiler_dict, name_list):
         if name in compiler_dict:
             resulting_compilers[name] = compiler_dict[name]
     return resulting_compilers
+
+
+def prepare_tmp_env(execdirs, tmpdir):
+    tmpdir.mkdir("execdir")
+    execdir = str(tmpdir.join("execdir")) + "/"
+    tmpdir.mkdir("shaderoutput")
+    shaderoutput = str(tmpdir.join("shaderoutput")) + "/"
+    tmpdir.mkdir("keptshaders")
+    keptshaderdir = str(tmpdir.join("keptshaders")) + "/"
+    tmpdir.mkdir("bufferoutput")
+    dumpbufferdir = str(tmpdir.join("bufferoutput")) + "/"
+    tmpdir.mkdir("keptbuffers")
+    keptbufferdir = str(tmpdir.join("keptbuffers")) + "/"
+    settings = DirSettings(execdirs.graphicsfuzz, execdir, shaderoutput, dumpbufferdir, keptbufferdir, keptshaderdir)
+    return settings

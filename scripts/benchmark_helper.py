@@ -15,6 +15,25 @@
 import argparse
 import os
 import sys
+from datetime import datetime
+
+
+def count_calls(log_file):
+    if os.path.isfile(log_file):
+        # Read current log file status (started reduction time and number of calls)
+        with open(log_file, "r") as f:
+            logs = f.readlines()
+            start_timestamp = logs[0].strip("\n")
+            file_calls = logs[1].strip("\n")
+    else:
+        # Give the current time as the reduction start time and prepare to write down the call numbers
+        start_timestamp = str(int(round(datetime.timestamp(datetime.now()))))
+        file_calls = 0
+    # Rewrite to the file
+    with open(log_file, "w") as f:
+        f.write(start_timestamp + "\n")
+        f.write(str(int(file_calls) + 1) + "\n")
+        f.write(str(int(round(datetime.timestamp(datetime.now())))))
 
 
 def main():
@@ -22,19 +41,6 @@ def main():
     parser.add_argument("--log", dest="log", default="log.txt", help="specify the log file")
     ns = parser.parse_args(sys.argv[1:])
     count_calls(ns.log)
-
-
-def count_calls(log_file):
-    file_call = 0
-    if os.path.isfile(log_file):
-        f = open(log_file, "r")
-        file_call = int(f.readline())
-        f.close()
-
-    # Rewrite to the file
-    g = open(log_file, "w")
-    g.write(str(file_call + 1))
-    g.close()
 
 
 if __name__ == '__main__':

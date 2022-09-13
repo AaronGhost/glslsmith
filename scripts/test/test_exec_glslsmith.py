@@ -6,7 +6,7 @@ import sys
 import pytest
 from scripts.exec_glslsmith import write_output_to_file, glsl_output, validate_compiler, syntax_check, save_test_case, \
     exec_glslsmith, main
-from scripts.test.conftest import compare_files, restrict_compilers
+from scripts.test.conftest import compare_files, restrict_compilers, prepare_tmp_env
 from scripts.utils.Compiler import Compiler
 from scripts.utils.ShaderTool import ShaderTool
 from scripts.utils.execution_utils import build_compiler_dict
@@ -100,21 +100,6 @@ def test_save_test_case(tmpdir, compilers_dict):
     assert len(os.listdir(tmpdir.join("dumpbuffers"))) == 0
 
 
-def prepare_tmp_env(execdirs, tmpdir):
-    tmp_execdirs = copy.copy(execdirs)
-    tmpdir.mkdir("execdir")
-    tmp_execdirs.execdir = str(tmpdir.join("execdir")) + "/"
-    tmpdir.mkdir("shaderoutput")
-    tmp_execdirs.shaderoutput = str(tmpdir.join("shaderoutput")) + "/"
-    tmpdir.mkdir("keptshaders")
-    tmp_execdirs.keptshaderdir = str(tmpdir.join("keptshaders")) + "/"
-    tmpdir.mkdir("bufferoutput")
-    tmp_execdirs.dumpbufferdir = str(tmpdir.join("bufferoutput")) + "/"
-    tmpdir.mkdir("keptbuffers")
-    tmp_execdirs.keptbufferdir = str(tmpdir.join("keptbuffers")) + "/"
-    return tmp_execdirs
-
-
 def test_exec_glslsmith_options(tmpdir, conf, capsys):
     # Temp environment
     execdirs = prepare_tmp_env(conf["exec_dirs"], tmpdir)
@@ -168,6 +153,7 @@ def test_exec_glslsmith_force_diff_files(mocker, conf, tmpdir):
     assert len(os.listdir(tmpdir.join("keptbuffers"))) == len(conf["compilers"])
 
 
+# TODO add a slow test
 def test_main(conf, tmpdir, capsys):
     print(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].dumpbufferdir))
     script_location = os.getcwd()

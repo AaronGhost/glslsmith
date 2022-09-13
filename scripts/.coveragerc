@@ -4,6 +4,7 @@ source = ./
 omit = *test/*
        *__init__*
        */install.py
+       graphicsfuzz/*
 
 [report]
 exclude_lines =

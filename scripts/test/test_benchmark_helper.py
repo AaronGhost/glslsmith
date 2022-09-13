@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import sys
 
 from scripts.benchmark_helper import count_calls, main
@@ -20,7 +21,9 @@ def test_count_calls(tmpdir):
     for i in range(5):
         count_calls(tmpdir.join("x.log"))
         with open(tmpdir.join("x.log")) as fid:
-            assert fid.readline() == str(i + 1)
+            lines = fid.readlines()
+            assert lines[1] == str(i+1)+"\n"
+            assert len(lines) == 3
 
 
 def test_main(tmpdir):
@@ -28,6 +31,8 @@ def test_main(tmpdir):
     for i in range(9):
         main()
         with open(tmpdir.join("y.log")) as fid:
-            assert fid.readline() == str(i + 1)
+            lines = fid.readlines()
+            assert lines[1] == str(i+1)+"\n"
+            assert len(lines) == 3
 
 
