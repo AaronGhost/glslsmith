@@ -39,11 +39,31 @@ def test_build_shell_test_error(tmpdir, mocker, conf):
     # Test that the code is correct for a given error code
     execdirs = prepare_tmp_env(conf["exec_dirs"], tmpdir)
     # Patch the comparison process to get a return code
-    mocker.patch('scripts.reduction_helper.execute_reduction', side_effect=exit_with_3016)
-
+    mocker.patch('scripts.create_shell_code.reduction_helper.execute_reduction', side_effect=exit_with_3016)
+    assert build_shell_test(build_compiler_dict(conf["compilers"]), execdirs, conf["shadertools"][0], "test.shadertrap",
+                            "test.comp", -1, "interesting.sh") == "3016"
+    assert os.path.isfile(os.path.join(execdirs.execdir, "interesting.sh"))
+    with open(os.path.join(execdirs.execdir, "interesting.sh"), "r") as f:
+        lines = f.readlines()
+        assert len(lines) == 26
+        assert lines[0] == "#!/usr/bin/env bash\n"
+        assert lines[18] == "ERROR_CODE_IN_FILE=$( (python3 ${ROOT}/scripts/reduction_helper.py --config-file ${" \
+                            "ROOT}/scripts/config.xml --shader-name ${ROOT}/test.shadertrap --host shadertrap 2>&1 > " \
+                            "/dev/null) || true)\n"
+    os.remove(os.path.join(execdirs.execdir, "interesting.sh"))
+    # Test double-run option
+    assert build_shell_test(build_compiler_dict(conf["compilers"]), execdirs, conf["shadertools"][0], "test.shadertrap",
+                            "test.comp", -1, "interesting.sh", True) == "3016"
+    assert os.path.isfile(os.path.join(execdirs.execdir, "interesting.sh"))
+    with open(os.path.join(execdirs.execdir, "interesting.sh"), "r") as f:
+        lines = f.readlines()
+        assert len(lines) == 26
+        assert lines[0] == "#!/usr/bin/env bash\n"
+        assert lines[18] == "ERROR_CODE_IN_FILE=$( (python3 ${ROOT}/scripts/reduction_helper.py --config-file ${" \
+                            "ROOT}/scripts/config.xml --shader-name ${ROOT}/test.shadertrap --host shadertrap " \
+                            "--double-run 2>&1 > /dev/null) || true)\n"
 
 # TODO create a test for the produced shell code
-
 def test_main():
     pass
 

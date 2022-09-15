@@ -52,7 +52,7 @@ def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shade
         print(error_code)
         if error_code != "0":
             print("Detected error code: " + error_code)
-            shell = open(shell_file, 'w')
+            shell = open(exec_dirs.execdir + shell_file, 'w')
             # Sets execution conditions
             shell.write("#!/usr/bin/env bash\n" +
                         "set -o pipefail\n" +
