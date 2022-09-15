@@ -155,7 +155,6 @@ def test_exec_glslsmith_force_diff_files(mocker, conf, tmpdir):
 
 # TODO add a slow test
 def test_main(conf, tmpdir, capsys):
-    print(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].dumpbufferdir))
     script_location = os.getcwd()
     try:
         for compiler in conf["compilers"]:

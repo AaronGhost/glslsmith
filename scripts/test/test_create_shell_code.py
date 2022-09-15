@@ -11,12 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# TODO create a test to validate the produced shell code
+
 import os
 import sys
 
 from scripts.test.conftest import prepare_tmp_env
-from scripts.create_shell_code import build_shell_test
+from scripts.create_shell_code import build_shell_test, main
 from scripts.utils.execution_utils import build_compiler_dict
+from scripts.utils.file_utils import clean_files, ensure_abs_path
 
 
 def test_build_shell_test_no_error(tmpdir, mocker, conf):
@@ -48,8 +52,8 @@ def test_build_shell_test_error(tmpdir, mocker, conf):
         assert len(lines) == 26
         assert lines[0] == "#!/usr/bin/env bash\n"
         assert lines[18] == "ERROR_CODE_IN_FILE=$( (python3 ${ROOT}/scripts/reduction_helper.py --config-file ${" \
-                            "ROOT}/scripts/config.xml --shader-name ${ROOT}/test.shadertrap --host shadertrap 2>&1 > " \
-                            "/dev/null) || true)\n"
+                            "ROOT}/scripts/config.xml --shader-name ${ROOT}/test.shadertrap --host " +\
+                            conf["shadertools"][0].name + " 2>&1 > /dev/null) || true)\n"
     os.remove(os.path.join(execdirs.execdir, "interesting.sh"))
     # Test double-run option
     assert build_shell_test(build_compiler_dict(conf["compilers"]), execdirs, conf["shadertools"][0], "test.shadertrap",
@@ -60,10 +64,17 @@ def test_build_shell_test_error(tmpdir, mocker, conf):
         assert len(lines) == 26
         assert lines[0] == "#!/usr/bin/env bash\n"
         assert lines[18] == "ERROR_CODE_IN_FILE=$( (python3 ${ROOT}/scripts/reduction_helper.py --config-file ${" \
-                            "ROOT}/scripts/config.xml --shader-name ${ROOT}/test.shadertrap --host shadertrap " \
-                            "--double-run 2>&1 > /dev/null) || true)\n"
+                            "ROOT}/scripts/config.xml --shader-name ${ROOT}/test.shadertrap --host " +\
+                            conf["shadertools"][0].name + " --double-run 2>&1 > /dev/null) || true)\n"
 
-# TODO create a test for the produced shell code
-def test_main():
-    pass
 
+def test_main(conf):
+    script_location = os.getcwd()
+    try:
+        sys.argv = ["create_shell_code.py", "--config-file", conf["conf_path"], "--shell-name", "test.sh"]
+        main()
+        assert os.path.isfile(ensure_abs_path(conf["exec_dirs"].execdir, "test.sh"))
+    finally:
+        if os.path.isfile(ensure_abs_path(conf["exec_dirs"].execdir, "test.sh")):
+            clean_files(conf["exec_dirs"].execdir, "test.sh")
+        os.chdir(script_location)
