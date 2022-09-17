@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import argparse
-import os
 import sys
 
 from utils.analysis_utils import comparison_helper, attribute_compiler_results
@@ -21,13 +20,29 @@ from utils.execution_utils import execute_compilation, env_setup
 from utils.file_utils import clean_files, find_buffer_file
 
 
-def clean_and_exit(exit_message, clean_dir):
-    if clean_dir:
-        clean_files(os.getcwd(), find_buffer_file(os.getcwd()))
-    sys.exit(exit_message)
+def attribute_compilation_results(results, compilers):
+    all_crashed = True
+    cp_codes_timeout = 0
+    cp_codes_crash = 0
+    for result, compiler in zip(results, compilers):
+        print(result, compiler)
+        if result != "no_crash" and result != "timeout":
+            cp_codes_crash += 1 << compiler.compilercode
+        elif result == "timeout":
+            cp_codes_timeout += 1 << compiler.compilercode
+        else:
+            all_crashed = False
+    if all_crashed:
+        return "1000"
+    elif cp_codes_crash != 0:
+        return str(1000 + cp_codes_crash)
+    elif cp_codes_timeout != 0:
+        return str(2000 + cp_codes_timeout)
+    else:
+        return str(0)
 
 
-# Internal error code on exit have been distributed as follow
+# Internal error codes are given below
 # Compiler codes are defined by the order of the compiler in the config file and only the first to fail is reported
 # All crash: 1000
 # crash / execution error: 1000 + compiler codes (by power of two)
@@ -36,63 +51,60 @@ def clean_and_exit(exit_message, clean_dir):
 # Angle vs other Compilation: 3099
 # Other differences across compilation: 4000
 # Difference across specific reference and current compilation (dead code removal): 5000 + compiler code
-def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref, clean_dir, double_run, postprocessing):
-    # Execute the host file with the different drivers
-    clean_files(os.getcwd(), find_buffer_file(os.getcwd()))
-    compilers = list(compilers_dict.values())
-    results = execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, exec_dirs.execdir, shader_tool, shader_name)
-    if clean_dir:
-        clean_files(os.getcwd(), ["tmp" + shader_tool.file_extension])
-    crash_flag = False
-    all_crashed = True
-    timeout_flag = False
-    cp_codes_timeout = 0
-    cp_codes_crash = 0
-    i = 0
-    for result in results:
-        if result != "no_crash" and result != "timeout":
-            cp_codes_crash += 1 << compilers[i].compilercode
-            crash_flag = True
-        elif result == "timeout":
-            cp_codes_timeout += 1 << compilers[i].compilercode
-            timeout_flag = True
-        else:
-            all_crashed = False
-        i += 1
-    if all_crashed:
-        clean_and_exit(str(1000), clean_dir)
-    elif crash_flag:
-        clean_and_exit(str(1000 + cp_codes_crash), clean_dir)
-    elif timeout_flag:
-        clean_and_exit(str(2000 + cp_codes_timeout), clean_dir)
-    print("No crash")
-    if ref != -1:
-        for compiler_name in compilers_dict.keys():
-            comparison_result = comparison_helper(
-                ["buffer_" + compiler_name + ".txt", exec_dirs.keptbufferdir + str(ref) + ".txt"])
-            if len(comparison_result) == 2:
-                print("Buffer difference between test and reference result: " + compiler_name)
-                sys.exit(str(5000 + compilers[compiler_name].compilercode))
-        print("No difference between tests and references")
-    buffers = []
-    for compiler_name in compilers_dict.keys():
-        buffers.append("buffer_" + compiler_name + ".txt")
-    comparison_result = comparison_helper(buffers)
-    if len(comparison_result) >= 2:
-        group_compiler = attribute_compiler_results(comparison_result, compilers_dict)
-        if group_compiler == "angle":
-            clean_and_exit(str(3099), clean_dir)
-        if group_compiler == "more than two":
-            clean_and_exit(str(4000) + " " + str(comparison_result), clean_dir)
-        if group_compiler in compilers_dict:
-            clean_and_exit(str(3000 + (1 << compilers_dict[group_compiler].compilercode)), clean_dir)
-        clean_and_exit(str("Unrecognized compiler: " + group_compiler), clean_dir)
+# Compiler not recognized: 9999
+def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref=-1, clean_dir=True, double_run=False,
+                      postprocessing=True):
+    # Clean the execution directory
+    clean_files(exec_dirs.execdir, find_buffer_file(exec_dirs.execdir))
+
+    # Compile the shader with the different drivers with the correct run type
+    if double_run:
+        run_type = "add_id"
+    elif not postprocessing:
+        run_type = "no_postprocessing"
     else:
-        if clean_dir:
-            clean_files(os.getcwd(), find_buffer_file(os.getcwd()))
-        print("No differences between implementations")
-        sys.stderr.write("0000")
-        sys.exit(0)
+        run_type = "standard"
+    results = execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, exec_dirs.execdir, shader_tool, shader_name,
+                                  run_type=run_type)
+
+    # Check for compilation / crash / timeout errors
+    error_code = attribute_compilation_results(results, list(compilers_dict.values()))
+
+    # Check for miscompilation / difference with a reference
+    if error_code == 0:
+        buffers = []
+        for compiler_name in compilers_dict.keys():
+            buffers.append("buffer_" + compiler_name + ".txt")
+
+        base_error = 3000
+        # Add the reference buffer if needed
+        if ref != -1:
+            buffers.append(ref)
+            base_error = 5000
+        # Compare the buffers
+        comparison_result = comparison_helper(buffers)
+        if len(comparison_result) >= 2:
+            # Miscompilation checks (base_error - 3000) / Difference with reference (base_error - 5000)
+            group_compiler = attribute_compiler_results(comparison_result, compilers_dict)
+            if group_compiler == "angle":
+                error_code = str(base_error + 99)
+            elif group_compiler == "more than two":
+                error_code = str(base_error + 1000) + " " + str(comparison_result)
+            elif group_compiler in compilers_dict:
+                error_code = str(base_error + compilers_dict[group_compiler].compilercode)
+            else:
+                error_code = str(9999)
+
+    # Clean the resulting files if necessary
+    if clean_dir:
+        clean_files(exec_dirs.execdir, find_buffer_file(exec_dirs.execdir))
+        clean_files(exec_dirs.execdir, ["tmp" + shader_tool.file_extension])
+    sys.stderr.write(str(error_code))
+    if error_code == "0":
+        print("No difference between shaders")
+        exit(0)
+    else:
+        exit(error_code)
 
 
 def main():
