@@ -207,6 +207,7 @@ def env_setup(parser):
                         help="specify a different configuration file from the default")
     parser.add_argument('--host', dest='host', default="shadertrap",
                         help="Specify the host language in which to embed the shader code")
+    parser.add_argument('--extent', dest='extent', default="full")
     ns = parser.parse_args(sys.argv[1:])
 
     # Parse directory config
@@ -332,8 +333,50 @@ def single_compile(compiler, shader_to_compile, shader_tool, timeout, run_type, 
     return False, False, "no_crash"
 
 
-def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, output_seed="", move_dir="./", verbose=False,
-                        timeout=10, double_run=False, postprocessing=True):
+def ensure_abs_path(root_dir, test_dir):
+    # Return test_dir if absolute or an absolute path using the root_dir
+    if os.path.isabs(test_dir):
+        return test_dir
+    else:
+        full_path = os.path.normpath(os.path.join(root_dir, test_dir))
+        if test_dir[-1] == "/":
+            return full_path + "/"
+        else:
+            return full_path
+
+
+def collect_process_return(process_return, check_value):
+    message = process_return.stdout + process_return.stderr
+    if check_value not in message:
+        print(message)
+        return False, message
+    return True, message
+
+
+def call_glslsmith_generator(graphicsfuzz, exec_dir, shadercount, output_directory, seed=-1, host="shadertrap"):
+    cmd = [graphicsfuzz + "graphicsfuzz/target/graphicsfuzz/python/drivers/glslsmith-generator", "--shader-count",
+           str(shadercount), "--output-directory", ensure_abs_path(exec_dir, output_directory)]
+    if seed != -1:
+        cmd += ["--seed", str(seed)]
+    if host != "shadertrap":
+        cmd += ["--printer", str(host)]
+    return collect_process_return(subprocess.run(cmd, capture_output=True, text=True), "SUCCESS!")
+
+
+def call_glslsmith_reconditioner(graphicsfuzz, exec_dir, shader, harness, extent="full", run_type="standard"):
+    cmd = [graphicsfuzz + "graphicsfuzz/target/graphicsfuzz/python/drivers/glslsmith-recondition", "--src",
+           ensure_abs_path(exec_dir, str(shader)), "--dest", ensure_abs_path(exec_dir, harness)]
+    if extent != "full":
+        cmd += ["--extent", extent]
+    if run_type == "add_id":
+        cmd += ["--id_wrappers"]
+    elif run_type == "reduced":
+        cmd += ["--reduce_wrappers", ensure_abs_path(exec_dir, "buffer_results.txt")]
+    return collect_process_return(subprocess.run(cmd, capture_output=True, text=True), "SUCCESS!")
+
+
+def execute_compilation(compilers_dict, graphicsfuzz, exec_dir, shader_tool, shadername, output_seed="", move_dir="./", verbose=False,
+                        timeout=10, double_run=False, postprocessing=True, extent="full"):
     no_compile_errors = []
     # Verify that the file exists
     if not os.path.isfile(shadername):
@@ -344,21 +387,12 @@ def execute_compilation(compilers_dict, graphicsfuzz, shader_tool, shadername, o
     shader_to_compile = shadername
     run_type = "standard"
     if postprocessing:
-        cmd = ["mvn", "-f", graphicsfuzz+"pom.xml", "-pl", "glslsmith", "-q", "-e", "exec:java",
-               "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler"]
-        args = r'-Dexec.args=--src ' + str(shadername) + r' --dest tmp' + shader_tool.file_extension
         if double_run:
-            args += r' --id_wrappers'
-        cmd += [args]
-        if verbose:
-            print("Reconditioning command: " + " ".join(cmd))
-        process_return = run(cmd, capture_output=True, text=True)
-        #print(process_return.stderr)
-        #print(process_return.stdout)
-        if "SUCCESS!" not in process_return.stdout:
-            print(process_return.stderr)
-            print(process_return.stdout)
-            print(shadername + " cannot be parsed for post-processing")
+            reconditioned, message = call_glslsmith_reconditioner(graphicsfuzz, exec_dir, shadername, "tmp" + shader_tool.file_extension, extent, "id_wrappers")
+        else:
+            reconditioned, message = call_glslsmith_reconditioner(graphicsfuzz, exec_dir, shadername, "tmp" + shader_tool.file_extension, extent)
+        if not reconditioned:
+            print(message)
             return [False for _ in compilers_dict]
         shader_to_compile = "tmp" + shader_tool.file_extension
 

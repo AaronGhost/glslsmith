@@ -49,15 +49,15 @@ def main():
     ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
 
     execute_reduction(compilers_dict, exec_dirs, shader_tool, ns.shader, ns.ref, ns.clean, ns.double_run,
-                      ns.postprocessing)
+                      ns.postprocessing, ns.extent)
 
 
-def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref, clean_dir, double_run, postprocessing):
+def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref, clean_dir, double_run, postprocessing, extent):
     # Execute the host file with the different drivers
     common.clean_files(os.getcwd(), common.find_buffer_file(os.getcwd()))
     compilers = list(compilers_dict.values())
-    results = common.execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, shader_tool, shader_name,
-                                         verbose=True, double_run=double_run, postprocessing=postprocessing)
+    results = common.execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, exec_dirs.execdir, shader_tool, shader_name,
+                                         verbose=True, double_run=double_run, postprocessing=postprocessing, extent=extent)
     if clean_dir:
         common.clean_files(os.getcwd(), ["tmp" + shader_tool.file_extension])
     crash_flag = False

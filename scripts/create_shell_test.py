@@ -36,15 +36,15 @@ def main():
     ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
 
     build_shell_test(compilers_dict, exec_dirs, shader_tool, ns.harness, ns.shader, ns.ref, ns.shellname,
-                     double_run=ns.double_run)
+                     double_run=ns.double_run, extent=ns.extent)
 
 
 def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shader_name, ref, shell_file, double_run=False,
-                     instrumentation=""):
+                     instrumentation="", extent="full"):
     # Collect error code from the reduction process
     try:
         reduction_helper.execute_reduction(compilers_dict, exec_dirs, shader_tool, harness_name, ref, True,
-                                           double_run=double_run, postprocessing=True)
+                                           double_run=double_run, postprocessing=True, extent=extent)
     except SystemExit as e:
         error_code = str(e)
         print("Detected error code: " + error_code)
@@ -76,10 +76,11 @@ def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shade
             + harness_name + " \"$SHADER\"\n")
         # Call reduction script to check for error code
         # TODO use only restricted compiler set
+        option = ""
+        if extent != "full":
+            option += " --extent " + extent
         if double_run:
-            option = " --double-run"
-        else:
-            option = ""
+            option += " --double-run"
         shell.write("ERROR_CODE_IN_FILE=$( (python3 ${ROOT}/scripts/reduction_helper.py --config-file ${"
                     "ROOT}/scripts/config.xml --shader-name ${ROOT}/" + harness_name + " --host " + shader_tool.name
                     + option + " 2>&1 > /dev/null) || true)\n")

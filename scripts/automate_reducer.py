@@ -42,14 +42,14 @@ def main():
                     files_to_reduce.remove(file.split("_")[0]  + shader_tool.file_extension)
 
         batch_reduction(reducer, compilers_dict, exec_dirs, files_to_reduce, shader_tool, ns.ref, ns.timeout,
-                        double_run=ns.double_run,  instrumentation=ns.instru)
+                        double_run=ns.double_run,  instrumentation=ns.instru, extent=ns.extent)
     else:
         run_reduction(reducer, compilers_dict, exec_dirs, ns.test_file, ns.output_file, shader_tool, ns.ref, ns.timeout,
-                      double_run=ns.double_run, instrumentation=ns.instru)
+                      double_run=ns.double_run, instrumentation=ns.instru, extent=ns.extent)
 
 
 def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool, ref, reduce_timeout,
-                    double_run=False, override_prefix="_reduced", instrumentation=False):
+                    double_run=False, override_prefix="_reduced", instrumentation=False, extent="full"):
     for file in files_to_reduce:
         # copy file to exec_dir
         file_radix = file.split(".")[0]
@@ -58,7 +58,7 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool,
         # run reduction
         run_reduction(reducer, compilers, exec_dirs, "original_test" + shader_tool.file_extension, "test_reduced" + shader_tool.file_extension, shader_tool,
                       ref, reduce_timeout, log_file=reducer.name + "_" + file_radix + ".log", double_run=double_run,
-                      instrumentation=instrumentation)
+                      instrumentation=instrumentation, extent=extent)
 
         # copy back
         if os.path.isfile(exec_dirs.execdir + os.sep + "test_reduced" + shader_tool.file_extension):
@@ -69,7 +69,7 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool,
 
 
 def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader_tool, ref, reduce_timeout, log_file="",
-                  double_run=False, instrumentation=True):
+                  double_run=False, instrumentation=True, extent="full"):
     # Builds the interestingness test
     print("Building the interesting shell script")
     # Builds a temp harness
@@ -82,7 +82,7 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
 
     error_code_str = create_shell_test.build_shell_test(compilers, exec_dirs, shader_tool, "temp" + shader_tool.file_extension,
                                                         reducer.input_file, ref, reducer.interesting_test,
-                                                        double_run=double_run, instrumentation=instrumentation_filename)
+                                                        double_run=double_run, instrumentation=instrumentation_filename, extent=extent)
     error_code = int(error_code_str[:4])
     # Make sure the interestingness test is executable
     interesting_test_stat = os.stat(reducer.interesting_test)

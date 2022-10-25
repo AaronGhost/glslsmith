@@ -51,6 +51,7 @@ def main():
                         help="Run the reconditioning step twice, reducing the number of wrappers on the second run")
     parser.add_argument('--verbose', dest='verbose', action='store_true',
                         help="Provide more logging information about the executed command")
+    parser.add_argument('--recondition-on_generation', dest='recondition', action="store_true")
     parser.add_argument('--glsl-only', dest="glsl_only", action="store_true",
                         help="Generate the files, recondition them on the go and split out the glsl shader out of the harness")
 
@@ -74,31 +75,19 @@ def main():
     while batch_nb == 1 or ns.continuous:
         if not ns.diffonly:
             if not ns.nogeneration:
-                # generate programs and seed reporting
-                cmd = ["mvn", "-f", exec_dirs.graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e"
-                    , "exec:java", "-Dexec.mainClass=com.graphicsfuzz.GeneratorHandler"]
-
-                args = r'-Dexec.args=--shader-count ' + str(
-                    ns.shadercount) + r' --output-directory ' + exec_dirs.shaderoutput
-                if ns.seed != -1:
-                    args += r' --seed ' + str(ns.seed)
-                if ns.host != "shadertrap":
-                    args += r' --printer ' + str(ns.host)
-                cmd += [args]
-
-                process_return = run(cmd, capture_output=True, text=True)
-                if "ERROR" in process_return.stdout:
+                succeeded, message = common.call_glslsmith_generator(exec_dirs.graphicsfuzz, exec_dirs.execdir, ns.shadercount, exec_dirs.shaderoutput, seed, ns.host)
+                if not succeeded:
                     print("error with glslsmith generator, please fix them before running the script again")
-                    print(process_return.stdout)
+                    print(message)
                     return
-                for line in process_return.stdout.split("\n"):
+                for line in message.split("\n"):
                     if "Seed:" in line:
                         print(line)
                         seed = int(line.split(':')[1])
 
                 print("Generation of " + str(ns.shadercount) + " shaders done")
                 if ns.generateonly:
-                    if ns.glsl_only:
+                    if ns.glsl_only or ns.recondition:
                         for i in range(ns.shadercount):
                             # Give the files their seed name
                             definitive_path = exec_dirs.shaderoutput + "test_" + str(seed + i) + shader_tool.file_extension
@@ -107,19 +96,14 @@ def main():
                             shutil.move(exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
                                         exec_dirs.shaderoutput + "test_" + str(seed + i) + shader_tool.file_extension)
                             # Post process the shader
-                            cmd = ["mvn", "-f", exec_dirs.graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e",
-                                   "exec:java",
-                                   "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler"]
-                            args = r'-Dexec.args=--src ' + str(definitive_path) + r' --dest ' + reconditioned_path
-                            cmd += [args]
-                            process_return = run(cmd, capture_output=True, text=True)
-                            if "SUCCESS!" not in process_return.stdout:
-                                print(process_return.stderr)
-                                print(process_return.stdout)
+                            succeeded, message = common.call_glslsmith_reconditioner(exec_dirs.graphicsfuzz, exec_dirs.execdir, definitive_path, reconditioned_path, ns.extent)
+                            if not succeeded:
+                                print(message)
                                 print(ns.shader + " cannot be parsed for post-processing")
                                 exit(1)
-                            splitter_merger.split(shader_tool, reconditioned_path, glsl_path)
-                        print("Shaders successfully reconditioned and outputed as glsl")
+                            if ns.glsl_only:
+                                splitter_merger.split(shader_tool, reconditioned_path, glsl_path)
+                        print("Shaders successfully reconditioned")
                     return
 
             # execute actions on generated shaders
@@ -127,8 +111,8 @@ def main():
                 # Execute the program with the default implementation
                 for i in range(ns.shadercount):
                     result = common.execute_compilation(
-                        [compilers_dict.values()[0]], exec_dirs.graphicsfuzz, shader_tool,
-                        exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension, verbose=True)
+                        [compilers_dict.values()[0]], exec_dirs.graphicsfuzz, exec_dirs.execdir, shader_tool,
+                        exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension, verbose=True, extent=ns.extent)
                     if result[0] != "no_crash":
                         print("Error on shader " + str(i))
                     else:
@@ -176,7 +160,7 @@ def main():
             for i in range(ns.shadercount):
                 common.execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, shader_tool,
                                            exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
-                                           str(i), exec_dirs.dumpbufferdir, verbose=ns.verbose,
+                                           str(i), exec_dirs.dumpbufferdir, verbose=ns.verbose, extent=ns.extent,
                                            double_run=ns.double_run, postprocessing=True)
         # Compare outputs and save buffers
         # Check that we can compare outputs across multiple compilers
