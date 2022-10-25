@@ -73,7 +73,7 @@ def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shade
         # Call merger
         shell.write(
             "python3 ${ROOT}/scripts/splitter_merger.py --config-file ${ROOT}/scripts/config.xml --host " + shader_tool.name + " --merge " + "${ROOT}/"
-            + harness_name + "$SHADER\"\n")
+            + harness_name + " \"$SHADER\"\n")
         # Call reduction script to check for error code
         # TODO use only restricted compiler set
         if double_run:
