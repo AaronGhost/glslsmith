@@ -158,7 +158,7 @@ def main():
             common.clean_files(exec_dirs.dumpbufferdir, buffers)
             # Execute program compilation on each compiler and save the results for the batch
             for i in range(ns.shadercount):
-                common.execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, shader_tool,
+                common.execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, exec_dirs.execdir, shader_tool,
                                            exec_dirs.shaderoutput + "test_" + str(i) + shader_tool.file_extension,
                                            str(i), exec_dirs.dumpbufferdir, verbose=ns.verbose, extent=ns.extent,
                                            double_run=ns.double_run, postprocessing=True)
