@@ -25,7 +25,7 @@ from datetime import timedelta
 import create_shell_code
 import splitter_merger
 from utils.execution_utils import env_setup
-from utils.file_utils import find_buffer_file, clean_files, find_test_file
+from utils.file_utils import find_compiler_buffer_file, clean_files, find_test_file
 
 
 def main():
@@ -88,7 +88,7 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
     shutil.copy(test_input, exec_dirs.execdir + "temp" + shader_tool.file_extension)
 
     # Provides log file location
-    error_code_str = create_shell_test.build_shell_test(compilers, exec_dirs, shader_tool,
+    error_code_str = create_shell_code.build_shell_test(compilers, exec_dirs, shader_tool,
                                                         exec_dirs.execdir + "temp" + shader_tool.file_extension,
                                                         reducer.input_file, ref, reducer.interesting_test,
                                                         double_run=double_run, log_name=log_file)

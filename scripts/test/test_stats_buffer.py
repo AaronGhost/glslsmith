@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 
 import pytest
 
@@ -54,7 +55,7 @@ def test_stats_buffers_and_main(capsys):
              "Group: d, lines: 17, seed: 15\n",
              "Group: a, lines: 4, seed: 333\n",
              "Group: more than two, lines: 5, seed: 522\n",
-             "Group: more than two, lines: 2, seed: 2358\n",
+             "Group: compiler groups, lines: 2, seed: 2358\n",
              "Group: a_x, lines: 13, seed: 9999\n",
              "========= SUMMARY ================================================================\n",
              "a different values: 3\n",
@@ -63,25 +64,26 @@ def test_stats_buffers_and_main(capsys):
              "d different values: 1\n",
              "a_x different values: 1\n",
              "angle different values: 2\n",
-             "more than two groups of values: 3\n"]
+             "more than two groups of values: 2\n",
+             "compiler groups: 1\n"]
 
     # All lines from the normal output should be in, the more than two group each carry an extra line before hand
     verbose_lines = lines.copy()
     verbose_lines[4] = "[['a', 'a_x'], ['b', 'c'], ['d']]\nGroup: more than two, lines: 21, seed: 3\n"
     verbose_lines[9] = "[['a'], ['a_x'], ['b'], ['c'], ['d']]\nGroup: more than two, lines: 5, seed: 522\n"
-    verbose_lines[10] = "[['a', 'b', 'a_x'], ['c', 'd']]\nGroup: more than two, lines: 2, seed: 2358\n"
+    verbose_lines[10] = "[['a', 'b', 'a_x'], ['c', 'd']]\nGroup: compiler groups, lines: 2, seed: 2358\n"
 
     # Test for the length of the outputs and then for all "lines" contained in it
     # Test without verbose
     stats_buffers("testdata/keptbuf/", "testdata/keptshad/", compiler_dict, shadertools, False)
     outputs = capsys.readouterr()
-    assert len(outputs.out.splitlines()) == 20
+    assert len(outputs.out.splitlines()) == 21
     for line in lines:
         assert line in str(outputs.out)
 
     # Test with verbose
     stats_buffers("testdata/keptbuf/", "testdata/keptshad/", compiler_dict, shadertools, True)
     outputs = capsys.readouterr()
-    assert len(outputs.out.splitlines()) == 23
+    assert len(outputs.out.splitlines()) == 24
     for line in verbose_lines:
         assert line in str(outputs.out)

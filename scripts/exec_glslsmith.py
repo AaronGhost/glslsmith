@@ -21,7 +21,7 @@ import splitter_merger
 from utils.analysis_utils import comparison_helper, attribute_compiler_results
 from utils.execution_utils import execute_compilation, call_glslsmith_generator, env_setup, \
     call_glslsmith_reconditioner, single_compile
-from utils.file_utils import find_buffer_file, clean_files
+from utils.file_utils import find_compiler_buffer_file, clean_files
 
 
 def validate_compiler(exec_dir, compiler, shader_tool):
@@ -78,7 +78,7 @@ def save_test_case(kept_shader_dir, dump_buffer_dir, kept_buffer_dir, compilers_
 
     # Move buffers
     for compiler_name in compilers_dict:
-        shutil.move(dump_buffer_dir + "buffer_" + compiler_name + "_" + current_seed + ".txt",
+        shutil.move(dump_buffer_dir + compiler_name + "_" + current_seed + ".txt",
                     kept_buffer_dir + compiler_name + "_" + current_seed + ".txt")
 
 
@@ -111,7 +111,7 @@ def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader
             syntax_check({first_compiler.name: first_compiler}, exec_dirs.execdir, exec_dirs.graphicsfuzz,
                          exec_dirs.shaderoutput, shader_tool, str(seed + i))
         # Clean the directory after usage and exit
-        clean_files(exec_dirs.execdir, find_buffer_file(exec_dirs.execdir))
+        clean_files(exec_dirs.execdir, find_compiler_buffer_file(exec_dirs.execdir, compilers_dict))
         clean_files(exec_dirs.execdir, ["tmp" + shader_tool.file_extension])
 
         print("Compilation of all programs done")
@@ -122,7 +122,7 @@ def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader
     for i in range(shader_count):
         current_seed = str(seed + i)
         # Clean the execution platform and execute compilation
-        clean_files(exec_dirs.execdir, find_buffer_file(exec_dirs.execdir))
+        clean_files(exec_dirs.execdir, find_compiler_buffer_file(exec_dirs.execdir, compilers_dict))
         clean_files(exec_dirs.execdir, ["tmp" + shader_tool.file_extension])
         shader_location = exec_dirs.shaderoutput + "test_" + current_seed + shader_tool.file_extension
         _ = execute_compilation(compilers_dict, exec_dirs.graphicsfuzz, exec_dirs.execdir, shader_tool,
@@ -133,7 +133,7 @@ def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader
         # Reference buffers for a given shader instance
         buffers_files = []
         for compiler_name in compilers_dict:
-            buffers_files.append(exec_dirs.dumpbufferdir + "buffer_" + compiler_name + "_" + current_seed + ".txt")
+            buffers_files.append(exec_dirs.dumpbufferdir + compiler_name + "_" + current_seed + ".txt")
         # Compare and check back the results from the buffers
         values = comparison_helper(buffers_files)
         if len(values) != 1:
@@ -146,7 +146,7 @@ def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader
             save_test_case(exec_dirs.keptshaderdir, exec_dirs.dumpbufferdir, exec_dirs.keptbufferdir, compilers_dict,
                            shader_location, current_seed, shader_tool)
 
-    clean_files(exec_dirs.execdir, find_buffer_file(exec_dirs.execdir))
+    clean_files(exec_dirs.execdir, find_compiler_buffer_file(exec_dirs.execdir, compilers_dict))
     clean_files(exec_dirs.execdir, ["tmp" + shader_tool.file_extension])
 
     # reduce with the default reducer if specified

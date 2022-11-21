@@ -23,10 +23,8 @@ from utils.Compiler import Compiler
 from utils.DirSettings import DirSettings
 from utils.Reducer import Reducer
 from utils.ShaderTool import ShaderTool
-from utils.file_utils import find_buffer_file, clean_files, concatenate_files
-
+from utils.file_utils import find_compiler_buffer_file, clean_files, concatenate_files, find_digit_buffer_file, ensure_abs_path
 from utils.analysis_utils import comparison_helper
-from utils.file_utils import find_digit_buffer_file, ensure_abs_path
 
 
 def build_compiler_dict(compilers, restrict_compilers=None):
@@ -227,9 +225,9 @@ def execute_compilation(compilers_dict, graphicsfuzz, exec_dir, shader_tool, sha
     for compiler_name in compilers_dict:
         # Specify the buffers output name (if a seed is given it is added in the name)
         if output_seed != "":
-            file_result = "buffer_" + compiler_name + "_" + str(output_seed) + ".txt"
+            file_result = compiler_name + "_" + str(output_seed) + ".txt"
         else:
-            file_result = "buffer_" + compiler_name + ".txt"
+            file_result = compiler_name + ".txt"
         file_result = ensure_abs_path(exec_dir, file_result)
         # Register the resulting buffer as a result instead of a temporary buffer (ie: buffer_1 etc...)
         resulting_buffers.append(file_result)

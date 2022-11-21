@@ -64,7 +64,10 @@ def test_find_file(tmpdir):
 
 
 @pytest.mark.parametrize("buffer_name, compiler_name",
-                         [("whatever/nvidia_0.txt", "nvidia"), ("vulkan_intel_522.txt", "vulkan_intel"), ("buffer_compiler_25.txt", "compiler")])
+                         [("whatever/nvidia_0.txt", "nvidia"),
+                          ("vulkan_intel_522.txt", "vulkan_intel"),
+                          ("buffer_compiler_25.txt", "compiler"),
+                          ("compiler.txt", "compiler")])
 def test_get_compiler_name(buffer_name, compiler_name):
     assert get_compiler_name(buffer_name) == compiler_name
 

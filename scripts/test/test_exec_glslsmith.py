@@ -86,7 +86,7 @@ def test_save_test_case(tmpdir, compilers_dict):
     name_list = ["a", "ba", "c", "d_x"]
     for name in name_list:
         shutil.copy("testdata/exec_glslsmith/buffer_" + name + "_1.txt",
-                    str(tmpdir) + "/dumpbuffers/buffer_" + name + "_1.txt")
+                    str(tmpdir) + "/dumpbuffers/" + name + "_1.txt")
     compilers_dict = restrict_compilers(compilers_dict, name_list)
 
     save_test_case(str(tmpdir) + "/keptshaders/", str(tmpdir) + "/dumpbuffers/", str(tmpdir) + "/keptbuffers/",
@@ -107,29 +107,29 @@ def test_exec_glslsmith_options(tmpdir, conf, capsys):
     # Test on glsl-only + constrained seed
     with pytest.raises(SystemExit) as e:
         exec_glslsmith(execdirs, ["unused"], conf["reducers"][0], conf["shadertools"][0], 0, 2, glsl_only=True)
-        assert e.type == SystemExit
-        assert e.value.code == 0
-        assert len(os.listdir(tmpdir.join("execdir"))) == 0
-        assert os.path.isfile(tmpdir.join("shaderoutput/test_0_re.comp"))
-        assert os.path.isfile(tmpdir.join("shaderoutput/test_1_re.comp"))
-        capsys.readouterr()
+    assert e.type == SystemExit
+    assert e.value.code == 0
+    assert len(os.listdir(tmpdir.join("execdir"))) == 0
+    assert os.path.isfile(tmpdir.join("shaderoutput/test_0_re.comp"))
+    assert os.path.isfile(tmpdir.join("shaderoutput/test_1_re.comp"))
+    capsys.readouterr()
 
     # Test on syntax-only
     with pytest.raises(SystemExit) as e:
         exec_glslsmith(execdirs, build_compiler_dict(conf["compilers"], ["swiftshader"]), conf["reducers"][0],
                        conf["shadertools"][0], 0, 2, syntax_only=True)
-        assert e.type == SystemExit
-        assert e.value.code == 0
-        assert len(os.listdir(tmpdir.join("execdir"))) == 0
         syntax_outputs = capsys.readouterr().out
         assert "Shader 0 validated" in syntax_outputs
         assert "Shader 1 validated" in syntax_outputs
+    assert e.type == SystemExit
+    assert e.value.code == 0
+    assert len(os.listdir(execdirs.execdir)) == 0
 
     # Test on normal case without difference
     exec_glslsmith(execdirs, build_compiler_dict(conf["compilers"]), conf["reducers"][0],
                    conf["shadertools"][0], 0, 2)
-    assert len(os.listdir(tmpdir.join("bufferoutput"))) == 2 * len(conf["compilers"])
-    assert len(os.listdir(tmpdir.join("execdir"))) == 0
+    assert len(os.listdir(execdirs.dumpbufferdir)) == 2 * len(conf["compilers"])
+    assert len(os.listdir(execdirs.execdir)) == 0
 
 
 def test_exec_glslsmith_generation_error(mocker, conf):
@@ -156,12 +156,17 @@ def test_exec_glslsmith_force_diff_files(mocker, conf, tmpdir):
 # TODO add a slow test
 def test_main(conf, tmpdir, capsys):
     script_location = os.getcwd()
+
+    # Temp environment
+    execdirs = conf["exec_dirs"]
+
     try:
         for compiler in conf["compilers"]:
-            print(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].dumpbufferdir))
-            clean_files(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].dumpbufferdir),
+            print(ensure_abs_path(execdirs.execdir, execdirs.dumpbufferdir))
+            clean_files(ensure_abs_path(execdirs.execdir, execdirs.dumpbufferdir),
                         ["buffer_" + compiler.name + "_0.txt", "buffer_" + compiler.name + "_1.txt"])
         file_extension = conf["shadertools"][0].file_extension
+
         # Test on glsl-only + constrained seed
         with pytest.raises(SystemExit) as e:
             sys.argv = ["exec_glslsmith.py", "--seed", str(0), "--shader-count", str(1), "--glsl-only", "--config-file",
@@ -170,11 +175,11 @@ def test_main(conf, tmpdir, capsys):
             assert e.type == SystemExit
             assert e.value.code == 0
             assert os.path.isfile(
-                ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].shaderoutput) + "/test_0_re.comp")
+                ensure_abs_path(execdirs.execdir, execdirs.shaderoutput) + "/test_0_re.comp")
             assert os.path.isfile(
-                ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].shaderoutput) + "/test_1_re.comp")
+                ensure_abs_path(execdirs.execdir, execdirs.shaderoutput) + "/test_1_re.comp")
             capsys.readouterr()
-        clean_files(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].shaderoutput),
+        clean_files(ensure_abs_path(execdirs.execdir, execdirs.shaderoutput),
                     ["test_0_re.comp", "test_1_re.comp", "test_0" + file_extension, "test_1" + file_extension,
                      "test_0_re" + conf["shadertools"][0].file_extension,
                      "test_1_re" + conf["shadertools"][0].file_extension])
@@ -186,27 +191,33 @@ def test_main(conf, tmpdir, capsys):
                         "--config-file",
                         conf["conf_path"]]
             main()
-            assert e.type == SystemExit
-            assert e.value.code == 0
             syntax_outputs = capsys.readouterr().out
             assert "Shader 0 validated" in syntax_outputs
             assert "Shader 1 validated" in syntax_outputs
-        os.chdir(script_location)
-        clean_files(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].shaderoutput),
+        assert e.type == SystemExit
+        assert e.value.code == 0
+
+        clean_files(ensure_abs_path(execdirs.execdir, execdirs.shaderoutput),
                     ["test_0" + file_extension, "test_1" + file_extension])
         for compiler in conf["compilers"]:
-            clean_files(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].dumpbufferdir),
-                        ["buffer_" + compiler.name + "_0.txt", "buffer_" + compiler.name + "_1.txt"])
+            clean_files(ensure_abs_path(execdirs.execdir, execdirs.dumpbufferdir),
+                        [compiler.name + "_0.txt", compiler.name + "_1.txt"])
 
+        os.chdir(script_location)
         # Test on normal case without difference
         sys.argv = ["exec_glslsmith.py", "--shader-count", str(2), "--seed", str(0), "--config-file", conf["conf_path"]]
         main()
         os.chdir(script_location)
         for compiler in conf["compilers"]:
-            assert os.path.isfile(ensure_abs_path(conf["exec_dirs"].execdir, conf["exec_dirs"].dumpbufferdir) +
-                                  "buffer_" + compiler.name + "_0.txt")
-            assert os.path.isfile(ensure_abs_path(conf["exec_dirs"].execdir,
+            assert os.path.isfile(ensure_abs_path(execdirs.execdir, execdirs.dumpbufferdir) +
+                                  compiler.name + "_0.txt")
+            assert os.path.isfile(ensure_abs_path(execdirs.execdir,
                                                   conf[
-                                                      "exec_dirs"].dumpbufferdir) + "buffer_" + compiler.name + "_1.txt")
+                                                      "exec_dirs"].dumpbufferdir) + compiler.name + "_1.txt")
+
+            # Clean the files from the dumpbufferdir
+        for compiler in conf["compilers"]:
+            clean_files(ensure_abs_path(execdirs.execdir, execdirs.dumpbufferdir),
+                        [compiler.name + "_0.txt", compiler.name + "_1.txt"])
     finally:
         os.chdir(script_location)

@@ -254,7 +254,7 @@ def test_execute_compilation(tmpdir, conf, capsys):
                "no_crash"] * len(compilers_dict)
 
     for compiler in conf["compilers"]:
-        assert os.path.isfile(str(tmpdir.join("sub")) + "/buffer_" + compiler.name + ".txt")
+        assert os.path.isfile(str(tmpdir.join("sub")) + "/" + compiler.name + ".txt")
 
     # Real shader file with seed and without post-processing and copy back the resulting buffers
     tmpdir.mkdir("nopost")
@@ -268,8 +268,8 @@ def test_execute_compilation(tmpdir, conf, capsys):
                "no_crash"] * len(compilers_dict)
 
     for compiler in conf["compilers"]:
-        assert os.path.isfile(str(tmpdir.join("copy")) + "/buffer_" + compiler.name + "_0.txt")
-        assert not os.path.isfile(str(tmpdir.join("nopost")) + "/buffer_" + compiler.name + "_0.txt")
+        assert os.path.isfile(str(tmpdir.join("copy")) + "/" + compiler.name + "_0.txt")
+        assert not os.path.isfile(str(tmpdir.join("nopost")) + "/" + compiler.name + "_0.txt")
     assert not os.path.isfile(str(tmpdir.join("nopost")) + "/tmp" + shader_tool.file_extension)
 
     # Test of the add_id / reduced features
@@ -284,7 +284,7 @@ def test_execute_compilation(tmpdir, conf, capsys):
                "no_crash"] * len(compilers_dict)
 
     for compiler in conf["compilers"]:
-        assert os.path.isfile(str(tmpdir.join("add_id")) + "/buffer_" + compiler.name + ".txt")
+        assert os.path.isfile(str(tmpdir.join("add_id")) + "/" + compiler.name + ".txt")
     assert os.path.isfile(str(tmpdir.join("add_id")) + "/tmp" + shader_tool.file_extension)
     assert filecmp.cmp("testdata/execution_utils/tmp" + shader_tool.file_extension,
                        str(tmpdir.join("add_id")) + "/tmp" + shader_tool.file_extension, shallow=False)

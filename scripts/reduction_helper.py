@@ -17,15 +17,14 @@ import sys
 
 from utils.analysis_utils import comparison_helper, attribute_compiler_results
 from utils.execution_utils import execute_compilation, env_setup
-from utils.file_utils import clean_files, find_buffer_file
+from utils.file_utils import clean_files, find_compiler_buffer_file
 
 
-def attribute_compilation_results(results, compilers):
+def identify_crashes(results, compilers):
     all_crashed = True
     cp_codes_timeout = 0
     cp_codes_crash = 0
     for result, compiler in zip(results, compilers):
-        print(result, compiler)
         if result != "no_crash" and result != "timeout":
             cp_codes_crash += 1 << compiler.compilercode
         elif result == "timeout":
@@ -52,10 +51,10 @@ def attribute_compilation_results(results, compilers):
 # Other differences across compilation: 4000
 # Difference across specific reference and current compilation (dead code removal): 5000 + compiler code
 # Compiler not recognized: 9999
-def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref=-1, clean_dir=True, double_run=False,
+def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref="", clean_dir=True, double_run=False,
                       postprocessing=True):
     # Clean the execution directory
-    clean_files(exec_dirs.execdir, find_buffer_file(exec_dirs.execdir))
+    clean_files(exec_dirs.execdir, find_compiler_buffer_file(exec_dirs.execdir, compilers_dict))
 
     # Compile the shader with the different drivers with the correct run type
     if double_run:
@@ -68,23 +67,24 @@ def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref=-
                                   run_type=run_type)
 
     # Check for compilation / crash / timeout errors
-    error_code = attribute_compilation_results(results, list(compilers_dict.values()))
+    error_code = identify_crashes(results, list(compilers_dict.values()))
 
     # Check for miscompilation / difference with a reference
-    if error_code == 0:
+    if error_code == "0":
         buffers = []
         for compiler_name in compilers_dict.keys():
-            buffers.append("buffer_" + compiler_name + ".txt")
+            buffers.append(exec_dirs.execdir + compiler_name + ".txt")
 
         base_error = 3000
         # Add the reference buffer if needed
-        if ref != -1:
+        if ref != "":
             buffers.append(ref)
             base_error = 5000
         # Compare the buffers
         comparison_result = comparison_helper(buffers)
         if len(comparison_result) >= 2:
             # Miscompilation checks (base_error - 3000) / Difference with reference (base_error - 5000)
+            print(comparison_result)
             group_compiler = attribute_compiler_results(comparison_result, compilers_dict)
             if group_compiler == "angle":
                 error_code = str(base_error + 99)
@@ -97,8 +97,9 @@ def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref=-
 
     # Clean the resulting files if necessary
     if clean_dir:
-        clean_files(exec_dirs.execdir, find_buffer_file(exec_dirs.execdir))
+        clean_files(exec_dirs.execdir, find_compiler_buffer_file(exec_dirs.execdir, compilers_dict))
         clean_files(exec_dirs.execdir, ["tmp" + shader_tool.file_extension])
+
     sys.stderr.write(str(error_code))
     if error_code == "0":
         print("No difference between shaders")
@@ -112,11 +113,9 @@ def main():
         description="Tool to compile and compare shader output in order to help shader reduction")
     parser.add_argument("--no-postprocessing", dest="postprocessing", action="store_false",
                         help="Deactivate post-processing")
-    parser.add_argument("--override-compilers", dest="restrict_compilers", default=[], nargs="+",
-                        help="Override the list of compilers which will be used")
     parser.add_argument('--shader-name', dest='shader', default='test.shadertrap',
                         help="Specify the shader name to reduce (by default: test.shadertrap)")
-    parser.add_argument('--ref', type=int, dest="ref", default=-1,
+    parser.add_argument('--ref', dest="ref", default="",
                         help="Compare the combined buffer outputs to a reference file")
     parser.add_argument('--no-cleaning', dest='clean', action="store_false",
                         help="Do not clean buffers and post-processed shaders after execution")

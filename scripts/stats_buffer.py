@@ -45,6 +45,7 @@ def stats_buffers(buffer_dir, shader_dir, compilers_dict, shader_tools, verbose)
         compiler_differences[compiler_name] = 0
     compiler_differences["angle"] = 0
     compiler_differences["more than two"] = 0
+    compiler_differences["compiler groups"] = 0
     # Get a list of the files in the directory
     seeds = extract_seed_from_buffer_files(os.listdir(buffer_dir))
 
@@ -58,7 +59,7 @@ def stats_buffers(buffer_dir, shader_dir, compilers_dict, shader_tools, verbose)
         group_name = attribute_compiler_results(results, compilers_dict)
         compiler_differences[group_name] += 1
 
-        if verbose and group_name == "more than two":
+        if verbose and group_name in ["more than two", "compiler groups"]:
             print(results)
         # Report the number of lines for each shader
         for tool in shader_tools:
@@ -73,6 +74,7 @@ def stats_buffers(buffer_dir, shader_dir, compilers_dict, shader_tools, verbose)
         print(compiler_name + " different values: " + str(compiler_differences[compiler_name]))
     print("angle different values: " + str(compiler_differences["angle"]))
     print("more than two groups of values: " + str(compiler_differences["more than two"]))
+    print("compiler groups: " + str(compiler_differences["compiler groups"]))
 
 
 def main():  # pragma: no cover

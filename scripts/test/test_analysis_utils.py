@@ -26,7 +26,7 @@ def test_comparison_helper(seed, group):
                                             ([["a"], ["b"]], "a"),
                                             ([["a", "c"], ["b", "d"]], "angle"),
                                             ([["b", "d", "e"], ["a", "f"]], "angle"),
-                                            ([["a", "b"], ["c", "d"]], "more than two"),
+                                            ([["a", "b"], ["c", "d"]], "compiler groups"),
                                             ([["a"], ["b"], ["c"], ["d"]], "more than two")])
 def test_attribute_compiler_results(results, group):
     compiler_dict = {"a": Compiler("a", "a", "angle", "", "", []),

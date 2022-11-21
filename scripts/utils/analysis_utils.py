@@ -49,5 +49,6 @@ def attribute_compiler_results(results, compilers_dict):
                     and all(compilers_dict[buffer_name].type == "independent"
                             for buffer_name in results[0])):
             return "angle"
+        return "compiler groups"
     # Something else is happening
     return "more than two"

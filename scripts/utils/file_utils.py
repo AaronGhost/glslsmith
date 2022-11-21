@@ -51,8 +51,9 @@ def find_digit_buffer_file(current_dir):  # pragma: no cover
     return find_file(current_dir, "buffer_[0-9]+")
 
 
-def find_buffer_file(current_dir):  # pragma: no cover
-    return find_file(current_dir, "buffer_")
+def find_compiler_buffer_file(current_dir, compilers):
+    compilers_regex = "|".join(compilers)
+    return find_file(current_dir, compilers_regex)
 
 
 def find_test_file(current_dir):  # pragma: no cover
@@ -60,7 +61,7 @@ def find_test_file(current_dir):  # pragma: no cover
 
 
 def get_compiler_name(buffer_name):
-    return buffer_name.split("/")[-1].rsplit("_", 1)[0].removeprefix("buffer_")
+    return re.split("_[0-9]+", buffer_name.split("/")[-1].removeprefix("buffer_").removesuffix(".txt"))[0]
 
 
 def get_seed(buffer_name):
