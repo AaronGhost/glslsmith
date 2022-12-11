@@ -22,52 +22,21 @@ import sys
 import time
 from datetime import timedelta
 
+import regex
+
 import create_shell_code
 import splitter_merger
 from utils.execution_utils import env_setup
-from utils.file_utils import find_compiler_buffer_file, clean_files, find_test_file
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Automates the reduction of a shadertrap file")
-    parser.add_argument("--test-file-name", dest="test_file", default="test_original.shadertrap",
-                        help="specify a test file to reduce (by default: test_original.shadertrap)")
-    parser.add_argument("--reducer", dest="reducer", default="glsl-reduce",
-                        help="Specify a reducer to call by its name (by default:glsl-reduce)")
-    parser.add_argument('--ref', type=int, dest="ref", default=-1)
-    parser.add_argument("--output-file", dest="output_file", default="test_reduced.shadertrap",
-                        help="specify the name of the expected output file")
-    parser.add_argument("--batch-reduction", dest="batch", action="store_true",
-                        help="launch batch reduction on all shaders stored in keptshaders (only attempt to reduce "
-                             "shaders which are not already reduced)")
-    parser.add_argument("--reduce-timeout", dest="timeout", action="store_true",
-                        help="forces the reducer to attempt to reduce shaders which time out")
-    parser.add_argument('--double-run', dest="double_run", action="store_true",
-                        help="Run the program twice eliminating useless wrappers on the second run")
-    ns, exec_dirs, compilers_dict, reducer, shader_tool = env_setup(parser)
-    if ns.batch:
-        files_to_reduce = os.listdir(exec_dirs.keptshaderdir)
-        # Exclude files that have been already reduced
-        for file in list(files_to_reduce):
-            if os.path.isfile(exec_dirs.keptshaderdir + file) and len(file.split("_")) > 1:
-                files_to_reduce.remove(file)
-                if os.path.isfile(exec_dirs.keptshaderdir + file.split("_")[0] + shader_tool.file_extension):
-                    files_to_reduce.remove(file.split("_")[0] + shader_tool.file_extension)
-
-        batch_reduction(reducer, compilers_dict, exec_dirs, files_to_reduce, shader_tool, ns.ref, ns.timeout,
-                        double_run=ns.double_run)
-    else:
-        run_reduction(reducer, compilers_dict, exec_dirs, ns.test_file, ns.output_file, shader_tool, ns.ref, ns.timeout,
-                      double_run=ns.double_run)
+from utils.file_utils import clean_files, find_test_file
 
 
 def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool, ref, reduce_timeout=False,
-                    double_run=False, override_prefix="_reduced"):
+                    double_run=False):
     for file in files_to_reduce:
         # copy file to exec_dir
-        file_name = file.split(".")[0]
-        print("Reduction of " + exec_dirs.keptshaderdir + file)
-        shutil.copy(exec_dirs.keptshaderdir + file, exec_dirs.execdir + file)
+        file_name = file.split("/")[-1].split(".")[0]
+        print("Reduction of " + file)
+        shutil.copy(file, exec_dirs.execdir + "test_to_reduce" + shader_tool.file_extension)
         # run reduction
         run_reduction(reducer, compilers, exec_dirs, exec_dirs.execdir + file,
                       exec_dirs.exec_dir + "test_reduced" + shader_tool.file_extension, shader_tool,
@@ -76,9 +45,10 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool,
         # copy back
         if os.path.isfile(exec_dirs.execdir + "test_reduced" + shader_tool.file_extension):
             shutil.copy("test_reduced" + shader_tool.file_extension,
-                        exec_dirs.keptshaderdir + file_name + override_prefix + shader_tool.file_extension)
+                        exec_dirs.keptshaderdir + file_name + "_re" + shader_tool.file_extension)
             # clean exec_dir
-            clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
+            clean_files(os.getcwd(), ["test_to_reduce" + shader_tool.file_extension,
+                                      "test_reduced" + shader_tool.file_extension])
 
 
 def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader_tool, ref, reduce_timeout=False,
@@ -145,6 +115,46 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
         print("No error on the current shader")
 
     clean_files(exec_dirs.execdir, temp_files)
+
+
+def get_files_to_reduce(reduce_keptshaders, test_file, keptshaderdir):
+    if reduce_keptshaders:
+        files_to_reduce = os.listdir(keptshaderdir)
+        for file in list(files_to_reduce):
+            # Exclude files that have been already reduced
+            if file.find("_re") != -1:
+                files_to_reduce.remove(file)
+                not_reduced_file = file.replace("_re", "")
+                if not_reduced_file in files_to_reduce:
+                    files_to_reduce.remove(not_reduced_file)
+        # Return fully qualified names
+        return map(lambda x: keptshaderdir + x, files_to_reduce)
+
+    else:
+        return [test_file]
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Automates the reduction of a shadertrap file")
+    parser.add_argument("--test-file-name", dest="test_file", default="test_original.shadertrap",
+                        help="specify a test file to reduce (by default: test_original.shadertrap)")
+    parser.add_argument("--reducer", dest="reducer", default="glsl-reduce",
+                        help="Specify a reducer to call by its name (by default:glsl-reduce)")
+    parser.add_argument('--ref', type=int, dest="ref", default=-1)
+    parser.add_argument("--output-file", dest="output_file", default="test_reduced.shadertrap",
+                        help="specify the name of the expected output file")
+    parser.add_argument("--batch-reduction", dest="batch", action="store_true",
+                        help="launch batch reduction on all shaders stored in keptshaders (only attempt to reduce "
+                             "shaders which are not already reduced)")
+    parser.add_argument("--reduce-timeout", dest="timeout", action="store_true",
+                        help="forces the reducer to attempt to reduce shaders which time out")
+    parser.add_argument('--double-run', dest="double_run", action="store_true",
+                        help="Run the program twice eliminating useless wrappers on the second run")
+    ns, exec_dirs, compilers_dict, reducer, shader_tool = env_setup(parser)
+
+    files_to_reduce = get_files_to_reduce(ns.batch, exec_dirs.execdir + ns.test_file, exec_dirs.keptshaderdir)
+    batch_reduction(reducer, compilers_dict, exec_dirs, files_to_reduce, shader_tool, ns.ref, ns.timeout,
+                    double_run=ns.double_run)
 
 
 if __name__ == '__main__':
