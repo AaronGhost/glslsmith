@@ -67,7 +67,7 @@ def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shade
                         "SHADER=$(pwd)\"/" + shader_name + "\"\n" +
                         "else\n" +
                         "SHADER_ROOT=$(echo $1 | sed -e 's/\\.[^.]*$//')\n" +
-                        "SHADER=\"${SHADER_ROOT}.comp\"\n" +
+                        "SHADER=\"${SHADER_ROOT}.comp.glsl\"\n" +
                         "fi\n")
             # Logging
             shell.write("python3 ${ROOT}/scripts/benchmark_helper.py --log ${ROOT}/" + log_name + "\n")

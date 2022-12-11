@@ -99,11 +99,21 @@ def test_execute_reduction(tmpdir, conf, mocker, compilers_dict, results, buffer
 
 
 def test_main(conf):
+    test_file = ""
+    copied_file = ""
+    if conf["shadertools"][0] == "shadertrap":
+        test_file = "test_identical.shadertrap"
+        copied_file = "testdata/shadertrap_shaders/shader_1.shadertrap"
+    elif conf["shadertools"][0] == "amber":
+        test_file = "test_identical.amber"
+        copied_file = "testdata/amber_shaders/shader_1.amber"
+    else:
+        pytest.mark.skip("Unknown shader tool")
     script_location = os.getcwd()
     try:
-        sys.argv = ["reduction_helper.py", "--shader-name", "test_identical.shadertrap", "--config-file", conf["conf_path"]]
+        sys.argv = ["reduction_helper.py", "--shader-name", test_file, "--config-file", conf["conf_path"]]
         # Copy a shadertrap from the testdata to the execdir
-        shutil.copy("testdata/shadertrap_shaders/shader_1.shadertrap", conf["exec_dirs"].execdir + "test_identical.shadertrap")
+        shutil.copy(copied_file, conf["exec_dirs"].execdir + test_file)
         # Execute the function expecting a SystemExit
         with pytest.raises(SystemExit) as e:
             main()
@@ -112,6 +122,6 @@ def test_main(conf):
 
     # Restore the original working directory when the test is done
     finally:
-        if os.path.isfile(conf["exec_dirs"].execdir + "test_identical.shadertrap"):
-            clean_files(conf["exec_dirs"].execdir, ["test_identical.shadertrap"])
+        if os.path.isfile(conf["exec_dirs"].execdir + test_file):
+            clean_files(conf["exec_dirs"].execdir, [test_file])
         os.chdir(script_location)
