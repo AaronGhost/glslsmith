@@ -22,8 +22,6 @@ import sys
 import time
 from datetime import timedelta
 
-import regex
-
 import create_shell_code
 import splitter_merger
 from utils.execution_utils import env_setup
@@ -35,31 +33,31 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool,
     for file in files_to_reduce:
         # copy file to exec_dir
         file_name = file.split("/")[-1].split(".")[0]
+        reduced_filename = file.replace(shader_tool.file_extension, "_re" + shader_tool.file_extension)
+        reduction_input = exec_dirs.execdir + "test_to_reduce" + shader_tool.file_extension
+        reduction_output = exec_dirs.execdir + "test_reduced" + shader_tool.file_extension
         print("Reduction of " + file)
-        shutil.copy(file, exec_dirs.execdir + "test_to_reduce" + shader_tool.file_extension)
+        shutil.copy(file, reduction_input)
         # run reduction
-        run_reduction(reducer, compilers, exec_dirs, exec_dirs.execdir + file,
-                      exec_dirs.exec_dir + "test_reduced" + shader_tool.file_extension, shader_tool,
-                      ref, reduce_timeout, log_file=reducer.name + "_" + file_name + ".log", double_run=double_run)
+        run_reduction(reducer, compilers, exec_dirs, reduction_input, reduction_output, shader_tool, ref,
+                      reduce_timeout, log_file=reducer.name + "_" + file_name + ".log", double_run=double_run)
 
         # copy back
-        if os.path.isfile(exec_dirs.execdir + "test_reduced" + shader_tool.file_extension):
-            shutil.copy("test_reduced" + shader_tool.file_extension,
-                        exec_dirs.keptshaderdir + file_name + "_re" + shader_tool.file_extension)
+        if os.path.isfile(reduction_output):
+            shutil.copy(reduction_output,
+                        reduced_filename)
             # clean exec_dir
-            clean_files(os.getcwd(), ["test_to_reduce" + shader_tool.file_extension,
+            clean_files(exec_dirs.execdir, ["test_to_reduce" + shader_tool.file_extension,
                                       "test_reduced" + shader_tool.file_extension])
 
 
 def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader_tool, ref, reduce_timeout=False,
                   log_file="reduction.log", double_run=False):
-    print("Building the interesting shell script")
-    # Builds a temp harness to construct the interestingness test
-    shutil.copy(test_input, exec_dirs.execdir + "temp" + shader_tool.file_extension)
 
+    original_test_files = find_test_file(exec_dirs.execdir)
     # Provides log file location
     error_code_str = create_shell_code.build_shell_test(compilers, exec_dirs, shader_tool,
-                                                        exec_dirs.execdir + "temp" + shader_tool.file_extension,
+                                                        test_input,
                                                         reducer.input_file, ref, reducer.interesting_test,
                                                         double_run=double_run, log_name=log_file)
 
@@ -71,7 +69,7 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
     error_code = int(error_code_str[:4])
 
     # List temporary files for cleaning
-    temp_files = [reducer.input_file, reducer.output_files, reducer.interesting_test, "temp" + shader_tool.file_extension]
+    temp_files = [reducer.input_file, reducer.output_files, reducer.interesting_test]
 
     # Check if we want to perform reduction for this type of errors
     if error_code >= 3000 or (1000 <= error_code <= 1999) or (error_code >= 2000 and reduce_timeout):
@@ -90,14 +88,14 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
 
         # Perform the reduction using the reduction launch command
         ref_timestamp = time.time()
-        print("Setup finished, beginning reduction")
         cmd = shlex.split(reducer.command)
-        print("Reducer command: " + " ".join(cmd))
+        print("Reduction launched: " + " ".join(cmd))
         process = subprocess.run(cmd, stdout=sys.stdout, stderr=sys.stdout, universal_newlines=True,
                                  cwd=exec_dirs.execdir)
 
         # Add eventual temporary files
         temp_files += find_test_file(exec_dirs.execdir)
+        temp_files = list(set(temp_files) - set(original_test_files))
 
         # Check results
         if os.path.isfile(reducer.output_files):
@@ -127,7 +125,8 @@ def get_files_to_reduce(reduce_keptshaders, test_file, keptshaderdir):
                 not_reduced_file = file.replace("_re", "")
                 if not_reduced_file in files_to_reduce:
                     files_to_reduce.remove(not_reduced_file)
-        # Return fully qualified names
+
+        # Return full path names
         return map(lambda x: keptshaderdir + x, files_to_reduce)
 
     else:
@@ -150,6 +149,7 @@ def main():
                         help="forces the reducer to attempt to reduce shaders which time out")
     parser.add_argument('--double-run', dest="double_run", action="store_true",
                         help="Run the program twice eliminating useless wrappers on the second run")
+
     ns, exec_dirs, compilers_dict, reducer, shader_tool = env_setup(parser)
 
     files_to_reduce = get_files_to_reduce(ns.batch, exec_dirs.execdir + ns.test_file, exec_dirs.keptshaderdir)
