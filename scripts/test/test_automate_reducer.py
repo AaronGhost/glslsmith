@@ -141,6 +141,9 @@ def test_batch_reduction(capsys, mocker, conf, tmpdir, files_to_reduce, simulate
 ])
 def test_main(conf, mocker, files, use_execdir, expected):
     script_location = os.getcwd()
+    if conf["shadertools"][0].name != "shadertrap":
+        pytest.mark.skip("No test for Amber")
+        return
     try:
         # Can't use the prepare_tmp_env function because we load the configuration file
         execdirs = conf["exec_dirs"]
