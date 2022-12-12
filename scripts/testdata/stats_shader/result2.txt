@@ -1,0 +1,5 @@
+void main()
+{
+ const ivec4 var_0[2] = ivec4[2](ivec4(1), ivec4(1));
+ (ext_7[SAFE_ABS(((((var_0[SAFE_ABS((var_0[SAFE_ABS(ext_4) % var_0.length()]).b) % var_0.length()]).ttss.gb.yy[1] - ext_4) - (- var_0[SAFE_ABS(var_0[SAFE_ABS(var_0[SAFE_ABS(ext_4) % var_0.length()].brg[1]) % var_0.length()].z) % var_0.length()].rgga.zx.yxx[0])) - (SAFE_DIV(- ext_4, - 2018396466)))) % ext_7.length()]) = 1u;
+}

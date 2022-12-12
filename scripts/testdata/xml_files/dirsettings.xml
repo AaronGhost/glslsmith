@@ -1,0 +1,8 @@
+<dirsettings>
+    <graphicsfuzz>/graphicsfuzz/python/drivers/</graphicsfuzz>
+    <execdir>./</execdir>
+    <shaderoutput>./glslsmithoutput/shaders/</shaderoutput>
+    <dumpbufferdir>./glslsmithoutput/buffers/</dumpbufferdir>
+    <keptbufferdir>./glslsmithoutput/keptbuffers/</keptbufferdir>
+    <keptshaderdir>./glslsmithoutput/keptshaders/</keptshaderdir>
+</dirsettings>

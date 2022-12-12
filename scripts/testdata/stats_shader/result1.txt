@@ -1,0 +1,4 @@
+void main()
+{
+ SAFE_DIV_ASSIGN(ext_9, - (1 - SAFE_DIV(1, ext_1)));
+}

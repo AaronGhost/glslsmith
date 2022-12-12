@@ -1,2 +1,4 @@
 glslsmithoutput/
 .idea/
+*__pycache__/
+*.coverage

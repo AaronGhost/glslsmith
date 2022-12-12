@@ -1,0 +1,29 @@
+#!amber
+
+SHADER compute compute_shader GLSL
+#version 310 es
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(std430, binding = 0) buffer buffer_0 {
+ uint ext_0[6];
+} ;
+
+void main()
+{
+  for(int i = 0; i < 6; i++){
+    ext_0[i] = 1u;
+  }
+}
+END
+
+BUFFER buffer_0 DATA_TYPE uint32 DATA
+0 0 0 0 0 0
+END
+
+PIPELINE compute pipeline
+    ATTACH compute_shader
+
+    BIND BUFFER buffer_0 AS storage DESCRIPTOR_SET 0 BINDING 0
+END
+
+RUN pipeline 1 1 1

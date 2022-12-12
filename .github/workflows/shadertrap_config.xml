@@ -1,0 +1,50 @@
+<?xml version="1.0" ?>
+<config>
+	<dirsettings>
+		<graphicsfuzz>/home/runner/work/glslsmith/glslsmith/graphicsfuzz/</graphicsfuzz>
+		<execdir>/home/runner/work/glslsmith/glslsmith/</execdir>
+		<shaderoutput>./glslsmithoutput/shaders/</shaderoutput>
+		<dumpbufferdir>./glslsmithoutput/buffers/</dumpbufferdir>
+		<keptbufferdir>./glslsmithoutput/keptbuffers/</keptbufferdir>
+		<keptshaderdir>./glslsmithoutput/keptshaders/</keptshaderdir>
+	</dirsettings>
+	<compilers>
+		<compiler>
+			<name>llvmpipe</name>
+			<renderer>llvmpipe</renderer>
+			<type>independent</type>
+			<LD_LIBRARY_PATH>/home/runner/llvmpipe/install/</LD_LIBRARY_PATH>
+			<VK_ICD_FILENAMES> </VK_ICD_FILENAMES>
+			<otherenvs> </otherenvs>
+		</compiler>
+		<compiler>
+			<name>swiftshader</name>
+			<renderer>SwiftShader</renderer>
+			<type>angle</type>
+			<LD_LIBRARY_PATH>/home/runner/angle/lib/</LD_LIBRARY_PATH>
+			<VK_ICD_FILENAMES>/home/runner/angle/lib/vk_swiftshader_icd.json</VK_ICD_FILENAMES>
+			<otherenvs> </otherenvs>
+		</compiler>
+	</compilers>
+	<shadertools>
+		<shadertool>
+			<name>shadertrap</name>
+			<path>/home/runner/shadertrap/bin/shadertrap</path>
+			<extension>.shadertrap</extension>
+		</shadertool>
+	</shadertools>
+	<reducers>
+		<reducer>
+			<name>glsl-reduce</name>
+			<command>/home/runner/work/glslsmith/glslsmith/graphicsfuzz/graphicsfuzz/target/graphicsfuzz/python/drivers/glsl-reduce /home/runner/work/glslsmith/glslsmith/test.json /home/runner/work/glslsmith/glslsmith/interesting.sh --output=/home/runner/work/glslsmith/glslsmith/ --no-ub-guards</command>
+			<interesting>interesting.sh</interesting>
+			<input_file>test.comp</input_file>
+			<output_file>test_reduced_final.comp</output_file>
+			<extra_files>
+				<length>1</length>
+				<file_0>test.json</file_0>
+			</extra_files>
+		</reducer>
+	</reducers>
+</config>
+

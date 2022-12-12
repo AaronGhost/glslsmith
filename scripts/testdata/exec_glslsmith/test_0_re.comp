@@ -1,0 +1,26 @@
+#version 310 es
+int SAFE_ABS(int p0);
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(std430, binding = 0) buffer buffer_ids {
+ int ids[1];
+};
+layout(std430, binding = 1) buffer buffer_0 {
+ uint ext_0[6];
+};
+int local_limiter_0 = 0;
+
+int SAFE_ABS(int A)
+{
+ return A == -2147483648 ? 2147483647 : abs(A);
+}
+void main()
+{
+ for(int i = 0; i < 6; i ++)
+  {
+   local_limiter_0 ++;
+   if(local_limiter_0 > 10)
+    break;
+   ext_0[SAFE_ABS(i) % ext_0.length()] = 1u;
+  }
+}
+

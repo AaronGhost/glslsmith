@@ -1,0 +1,12 @@
+[run]
+branch = True
+source = ./
+omit = *test/*
+       *__init__*
+       */install.py
+       graphicsfuzz/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:

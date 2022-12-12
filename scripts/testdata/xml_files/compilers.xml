@@ -1,0 +1,21 @@
+<compilers>
+    <compiler>
+        <name>aba</name>
+        <renderer>ababa</renderer>
+        <type>angle</type>
+        <LD_LIBRARY_PATH>/aba/build/lib/x86_64-linux-gnu</LD_LIBRARY_PATH>
+        <VK_ICD_FILENAMES>/aba/build/lib/vk_aba.json</VK_ICD_FILENAMES>
+        <otherenvs>
+            <length>1</length>
+            <env_0>X="y"</env_0>
+        </otherenvs>
+    </compiler>
+    <compiler>
+        <name>aba_cus</name>
+        <renderer>aba_ta</renderer>
+        <type>independent</type>
+        <LD_LIBRARY_PATH>/abacus/build/lib/x86_64-linux-gnu</LD_LIBRARY_PATH>
+        <VK_ICD_FILENAMES> </VK_ICD_FILENAMES>
+        <otherenvs> </otherenvs>
+    </compiler>
+</compilers>

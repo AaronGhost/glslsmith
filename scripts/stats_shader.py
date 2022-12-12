@@ -13,49 +13,24 @@
 # limitations under the License.
 
 import argparse
-import os
 import re
-from subprocess import run
 
-import common
-import splitter_merger
+from scripts.utils.execution_utils import env_setup, call_glslsmith_reconditioner
+from scripts.utils.file_utils import clean_files
+from splitter_merger import split
 
 
 def find_shader_main_body(glsl_text):
-    amber_reg = re.compile(r"void main\(\)\n{(.*)}\n", re.DOTALL)
-    match_object = amber_reg.search(glsl_text)
-    return match_object.group(1)
+    glsl_reg = re.compile(r"void main\(\)\n{(.*)}", re.DOTALL)
+    match_object = glsl_reg.search(glsl_text)
+    return match_object.group(0)
 
 
 def report_wrapper_call(main_text):
     return len(re.findall("SAFE", main_text))
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Provides statistics about a selected shader")
-    parser.add_argument('--shader-name', dest='shader', default='test.shadertrap',
-                        help="Specify the shader name to give stats on (by default: test.shadertrap)")
-    ns, exec_dirs, _, _, shader_tool = common.env_setup(parser)
-
-    harness_file = r'tmp' + shader_tool.file_extension
-    shader_file = r'tmp.glsl'
-
-    # Post process the shader
-    cmd = ["mvn", "-f", exec_dirs.graphicsfuzz + "pom.xml", "-pl", "glslsmith", "-q", "-e", "exec:java",
-           "-Dexec.mainClass=com.graphicsfuzz.PostProcessingHandler"]
-    args = r'-Dexec.args=--src ' + str(ns.shader) + r' --dest ' + harness_file
-    cmd += [args]
-    process_return = run(cmd, capture_output=True, text=True)
-    if "SUCCESS!" not in process_return.stdout:
-        print(process_return.stderr)
-        print(process_return.stdout)
-        print(ns.shader + " cannot be parsed for post-processing")
-        exit(1)
-
-    # Split the shader from the embedding code
-    splitter_merger.split(shader_tool, harness_file, shader_file)
-
-    # Report the number of lines and bytes in the current code
+def print_file_report(shader_file):
     with open(shader_file, "r") as f:
         line_count = 1
         bytes_count = 0
@@ -71,11 +46,35 @@ def main():
     # Report the number of wrapper calls in the current code
     with open(shader_file, "r") as g:
         wrapper_count = report_wrapper_call(find_shader_main_body(g.read()))
-    print("Wrapper calls:" + str(wrapper_count))
+    print("Wrapper calls: " + str(wrapper_count))
+
+
+def stats_shader(graphicsfuzz, exec_dir, shader_tool, shader, harness_file):
+    shader_file = exec_dir + r'tmp.glsl'
+    # Post-process the shader
+    check_passed, message = call_glslsmith_reconditioner(graphicsfuzz, exec_dir, shader, harness_file)
+    if not check_passed:
+        print(shader + " cannot be parsed for post-processing")
+        print(message)
+        exit(1)
+
+    # Split the shader from the embedding code
+    split(shader_tool, harness_file, shader_file)
+    # Report the number of lines and bytes in the current code
+    print_file_report(shader_file)
 
     # Delete the temp files and the temp shader
-    common.clean_files("./", [harness_file, shader_file])
-    exit(0)
+    clean_files(exec_dir, [harness_file, shader_file])
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Provides statistics about a selected shader")
+    parser.add_argument('--shader-name', dest='shader', default='test.shadertrap',
+                        help="Specify the shader name to give stats on (by default: test.shadertrap)")
+    ns, exec_dirs, _, _, shader_tool = env_setup(parser)
+
+    harness_file = r'tmp' + shader_tool.file_extension
+    stats_shader(exec_dirs.graphicsfuzz, exec_dirs.execdir, shader_tool, ns.shader, harness_file)
 
 
 if __name__ == "__main__":

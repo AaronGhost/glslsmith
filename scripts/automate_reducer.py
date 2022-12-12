@@ -1,3 +1,17 @@
+# Copyright 2021 The glslsmith Project Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 import os
 import shlex
@@ -8,9 +22,120 @@ import sys
 import time
 from datetime import timedelta
 
-import create_shell_test
-import common
+import create_shell_code
 import splitter_merger
+from utils.execution_utils import env_setup
+from utils.file_utils import clean_files, find_test_file, ensure_abs_path
+
+
+def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool, ref, reduce_timeout=False,
+                    double_run=False):
+    reduction_input = exec_dirs.execdir + "test_to_reduce" + shader_tool.file_extension
+    reduction_output = exec_dirs.execdir + "test_reduced" + shader_tool.file_extension
+    for file in files_to_reduce:
+        # copy file to exec_dir
+        file_name = file.split("/")[-1].split(".")[0]
+        reduced_filename = file.replace(shader_tool.file_extension, "_re" + shader_tool.file_extension)
+        print("Reduction of " + file)
+        shutil.copy(file, reduction_input)
+        # run reduction
+        run_reduction(reducer, compilers, exec_dirs, reduction_input, reduction_output, shader_tool, ref,
+                      reduce_timeout, log_file=reducer.name + "_" + file_name + ".log", double_run=double_run)
+
+        # copy back
+        if os.path.isfile(reduction_output):
+            shutil.copy(reduction_output,
+                        reduced_filename)
+            # clean exec_dir
+            clean_files(exec_dirs.execdir, ["test_to_reduce" + shader_tool.file_extension,
+                                            "test_reduced" + shader_tool.file_extension])
+
+
+def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader_tool, ref, reduce_timeout=False,
+                  log_file="reduction.log", double_run=False):
+    test_input = ensure_abs_path(exec_dirs.execdir, test_input)
+    test_output = ensure_abs_path(exec_dirs.execdir, test_output)
+    log_file = ensure_abs_path(exec_dirs.execdir, log_file)
+    input_file = ensure_abs_path(exec_dirs.execdir, reducer.input_file)
+    output_file = ensure_abs_path(exec_dirs.execdir, reducer.output_files)
+    original_test_files = find_test_file(exec_dirs.execdir)
+    # Provides log file location
+    error_code_str = create_shell_code.build_shell_test(compilers, exec_dirs, shader_tool,
+                                                        test_input,
+                                                        input_file, ref,
+                                                        exec_dirs.execdir + reducer.interesting_test,
+                                                        double_run=double_run, log_name=log_file)
+
+    # Ensure the interestingness test is executable
+    interesting_test_stat = os.stat(exec_dirs.execdir + reducer.interesting_test)
+    os.chmod(exec_dirs.execdir + reducer.interesting_test, interesting_test_stat.st_mode | stat.S_IEXEC)
+
+    # Parse the error code from the interestingness test
+    error_code = int(error_code_str[:4])
+
+    # List temporary files for cleaning
+    temp_files = [reducer.input_file, reducer.output_files, reducer.interesting_test]
+
+    # Check if we want to perform reduction for this type of errors
+    if error_code >= 3000 or (1000 <= error_code <= 1999) or (error_code >= 2000 and reduce_timeout):
+        # Copy the embedded harness file to the output (avoid destroying the harness through execution)
+        shutil.copy(test_input, test_output)
+
+        # Generate extra necessary files when using glsl-reduce
+        if reducer.name == "glsl-reduce":
+            json_file = open(input_file.split(".")[0] + ".json", "w")
+            json_file.write("{}")
+            json_file.close()
+            temp_files.append(input_file.split(".")[0] + ".json")
+
+        # Extract the shader code using the splitter and name it as input_file
+        splitter_merger.split(shader_tool, test_input, input_file)
+
+        # Perform the reduction using the reduction launch command
+        ref_timestamp = time.time()
+        cmd = shlex.split(reducer.command)
+        print("Reduction launched: " + " ".join(cmd))
+        process = subprocess.run(cmd, stdout=sys.stdout, stderr=sys.stdout, universal_newlines=True,
+                                 cwd=exec_dirs.execdir)
+
+        # Add eventual temporary files
+        temp_files += find_test_file(exec_dirs.execdir)
+        temp_files = list(set(temp_files) - set(original_test_files))
+
+        # Check results
+        if os.path.isfile(output_file):
+            # Merge the shader code with the harness
+            splitter_merger.merge(shader_tool, test_output, output_file)
+            temp_files.remove(test_output.split("/")[-1])
+            end_timestamp = time.time()
+            delta = timedelta(seconds=end_timestamp - ref_timestamp)
+            print("Reduction finished in " + str(delta))
+        else:
+            print("Reduction failed for shader")
+    elif error_code >= 2000:
+        print("Skipping test-case reduction for timeout shader")
+    else:
+        print("No error on the current shader")
+
+    clean_files(exec_dirs.execdir, temp_files)
+
+
+def get_files_to_reduce(reduce_keptshaders, test_file, keptshaderdir):
+    if reduce_keptshaders:
+        files_to_reduce = os.listdir(keptshaderdir)
+        for file in list(files_to_reduce):
+            # Exclude files that have been already reduced
+            if file.find("_re") != -1:
+                files_to_reduce.remove(file)
+                not_reduced_file = file.replace("_re", "")
+                if not_reduced_file in files_to_reduce:
+                    files_to_reduce.remove(not_reduced_file)
+
+        # Return full path names
+        return list(map(lambda x: keptshaderdir + x, files_to_reduce))
+
+    else:
+        return [test_file]
 
 
 def main():
@@ -27,111 +152,14 @@ def main():
                              "shaders which are not already reduced)")
     parser.add_argument("--reduce-timeout", dest="timeout", action="store_true",
                         help="forces the reducer to attempt to reduce shaders which time out")
-    parser.add_argument("--instrumentation", dest="instru", action="store_true",
-                        help="adds an extra line in the shell script to generate a reduction log file")
     parser.add_argument('--double-run', dest="double_run", action="store_true",
                         help="Run the program twice eliminating useless wrappers on the second run")
-    ns, exec_dirs, compilers_dict, reducer, shader_tool = common.env_setup(parser)
-    if ns.batch:
-        files_to_reduce = os.listdir(exec_dirs.keptshaderdir)
-        # Exclude files that have been already reduced
-        for file in list(files_to_reduce):
-            if os.path.isfile(exec_dirs.keptshaderdir + file) and len(file.split("_")) > 1:
-                files_to_reduce.remove(file)
-                if os.path.isfile(exec_dirs.keptshaderdir + file.split("_")[0] + shader_tool.file_extension):
-                    files_to_reduce.remove(file.split("_")[0]  + shader_tool.file_extension)
 
-        batch_reduction(reducer, compilers_dict, exec_dirs, files_to_reduce, shader_tool, ns.ref, ns.timeout,
-                        double_run=ns.double_run,  instrumentation=ns.instru)
-    else:
-        run_reduction(reducer, compilers_dict, exec_dirs, ns.test_file, ns.output_file, shader_tool, ns.ref, ns.timeout,
-                      double_run=ns.double_run, instrumentation=ns.instru)
+    ns, exec_dirs, compilers_dict, reducer, shader_tool = env_setup(parser)
 
-
-def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool, ref, reduce_timeout,
-                    double_run=False, override_prefix="_reduced", instrumentation=False):
-    for file in files_to_reduce:
-        # copy file to exec_dir
-        file_radix = file.split(".")[0]
-        print("Reduction of " + exec_dirs.keptshaderdir + file)
-        shutil.copy(exec_dirs.keptshaderdir + file, "original_test" + shader_tool.file_extension)
-        # run reduction
-        run_reduction(reducer, compilers, exec_dirs, "original_test" + shader_tool.file_extension, "test_reduced" + shader_tool.file_extension, shader_tool,
-                      ref, reduce_timeout, log_file=reducer.name + "_" + file_radix + ".log", double_run=double_run,
-                      instrumentation=instrumentation)
-
-        # copy back
-        if os.path.isfile(exec_dirs.execdir + os.sep + "test_reduced" + shader_tool.file_extension):
-            shutil.copy("test_reduced" + shader_tool.file_extension,
-                        exec_dirs.keptshaderdir + file_radix + override_prefix + shader_tool.file_extension)
-            # clean exec_dir
-            common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
-
-
-def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader_tool, ref, reduce_timeout, log_file="",
-                  double_run=False, instrumentation=True):
-    # Builds the interestingness test
-    print("Building the interesting shell script")
-    # Builds a temp harness
-    shutil.copy(test_input, "temp" + shader_tool.file_extension)
-
-    # Accounts for instrumentation
-    instrumentation_filename = log_file
-    if instrumentation and instrumentation_filename == "":
-        instrumentation_filename = reducer.name + "_" + test_input + ".log"
-
-    error_code_str = create_shell_test.build_shell_test(compilers, exec_dirs, shader_tool, "temp" + shader_tool.file_extension,
-                                                        reducer.input_file, ref, reducer.interesting_test,
-                                                        double_run=double_run, instrumentation=instrumentation_filename)
-    error_code = int(error_code_str[:4])
-    # Make sure the interestingness test is executable
-    interesting_test_stat = os.stat(reducer.interesting_test)
-    os.chmod(reducer.interesting_test, interesting_test_stat.st_mode | stat.S_IEXEC)
-    common.clean_files(exec_dirs.execdir, common.find_buffer_file(exec_dirs.execdir))
-    # Copy the input file to the output (prevents to destroy the harness through execution)
-    shutil.copy(test_input, test_output)
-    if error_code >= 3000 or (1000 <= error_code <= 1999) or (error_code >= 2000 and reduce_timeout):
-        if reducer.name == "glsl-reduce":
-            json_file = open(reducer.input_file.split(".")[0] + ".json", "w")
-            json_file.write("{}")
-            json_file.close()
-        # extract the shader code using the splitter and name it as input_file
-        splitter_merger.split(shader_tool, test_input, reducer.input_file)
-
-        # perform the reduction using the reduction launch command
-        ref_timestamp = time.time()
-        print("Setup finished, beginning reduction")
-        cmd = shlex.split(reducer.command)
-        print("Reducer command: " + " ".join(cmd))
-        process = subprocess.run(cmd, stdout=sys.stdout, stderr=sys.stdout, universal_newlines=True,
-                                 cwd=exec_dirs.execdir)
-        # after execution concatenate back the result
-        if os.path.isfile(reducer.output_files):
-            splitter_merger.merge(shader_tool, test_output, reducer.output_files)
-            end_timestamp = time.time()
-            delta = timedelta(seconds=end_timestamp - ref_timestamp)
-            print("Reduction finished in " + str(delta))
-            if instrumentation:
-                f = open(instrumentation_filename, "a")
-                f.write("\n" + str(delta))
-                f.close()
-        else:
-            print("Reduction failed for shader")
-            #common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
-    elif error_code >= 2000:
-        print("Skipping test-case reduction for timeout shader")
-        common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
-    else:
-        print("No error on the current shader")
-        common.clean_files(os.getcwd(), ["test_reduced" + shader_tool.file_extension])
-
-    # Cleans the current repository
-    common.clean_files(os.getcwd(),
-                       ["temp" + shader_tool.file_extension, reducer.input_file, reducer.output_files, reducer.interesting_test])
-    residues = common.find_test_file(os.getcwd())
-    if test_output in residues:
-        residues.remove(test_output)
-    common.clean_files(os.getcwd(), residues)
+    files_to_reduce = get_files_to_reduce(ns.batch, exec_dirs.execdir + ns.test_file, exec_dirs.keptshaderdir)
+    batch_reduction(reducer, compilers_dict, exec_dirs, files_to_reduce, shader_tool, ns.ref, ns.timeout,
+                    double_run=ns.double_run)
 
 
 if __name__ == '__main__':

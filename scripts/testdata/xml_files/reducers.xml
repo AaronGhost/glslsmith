@@ -1,0 +1,21 @@
+<reducers>
+    <reducer>
+        <name>picire</name>
+        <command>picire --input test.comp --test interesting.sh</command>
+        <interesting>interesting.sh</interesting>
+        <input_file>test.comp</input_file>
+        <output_file>test.comp</output_file>
+        <extra_files> </extra_files>
+    </reducer>
+    <reducer>
+        <name>glsl-reduce</name>
+        <command>com.graphicsfuzz.reducer.tool.GlslReduce</command>
+        <interesting>interesting.sh</interesting>
+        <input_file>test.comp</input_file>
+        <output_file>test_reduced_final.comp</output_file>
+        <extra_files>
+            <length>1</length>
+            <file_0>test.json</file_0>
+        </extra_files>
+    </reducer>
+</reducers>

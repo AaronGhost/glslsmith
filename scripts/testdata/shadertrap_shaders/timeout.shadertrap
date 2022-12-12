@@ -1,0 +1,28 @@
+GLES 3.1
+CREATE_BUFFER buffer_0 SIZE_BYTES 24 INIT_VALUES uint 0 0 0 0 0 0
+BIND_SHADER_STORAGE_BUFFER BUFFER buffer_0 BINDING 0
+
+
+DECLARE_SHADER shader KIND COMPUTE
+#version 310 es
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(std430, binding = 0) buffer buffer_0 {
+ uint ext_0[6];
+} ;
+
+void main()
+{
+  while(true) {
+  while(ext_0[0] != 4294901761u){
+   ext_0[0] += 1u;
+   ext_0[1] -= 1u;
+  }
+  }
+}
+END
+
+COMPILE_SHADER shader_compiled SHADER shader
+CREATE_PROGRAM compute_prog SHADERS shader_compiled
+RUN_COMPUTE PROGRAM compute_prog NUM_GROUPS 1 1 1
+DUMP_BUFFER_TEXT BUFFER buffer_0 FILE "buffer_0.txt" FORMAT "buffer_0 " uint 6

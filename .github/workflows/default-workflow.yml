@@ -1,0 +1,118 @@
+# Copyright 2021 The glslsmith Project Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Tests
+
+on: [push]
+
+jobs:
+  Check-glslsmith-scripts:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Setting up the repository
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+
+      # Unzip dependencies (Swiftshader / Shadertrap)
+      - name: Install Unzip
+        run: |
+          sudo apt-get install unzip
+      
+      # Python code execution
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+      
+      - name: Install pytest
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov pytest-mock
+
+      # Java dependencies
+      - name: Install Vulkan SDK
+        uses: humbletim/install-vulkan-sdk@v1.1
+        with:
+          version: latest
+          cache: true
+      
+      - name: Set up GraphicsFuzz with cache
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+          cache: 'maven'
+      
+      - name: Build GraphicsFuzz
+        run: cd graphicsfuzz && mvn -Dmaven.test.skip=true install
+
+      # llvmpipe
+      - name: Install mesa dependencies
+        run: $GITHUB_WORKSPACE/.github/workflows/llvmpipe_dep.sh
+
+      - name: Verify if llvmpipe is in cache
+        id: llvmpipe-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+           ~/llvmpipe
+          key: llvmpipe-v3
+
+      - name: Install llvmpipe
+        if: steps.llvmpipe-cache.outputs.cache-hit != 'true'
+        run:
+          mkdir ~/llvmpipe && cd ~/llvmpipe && $GITHUB_WORKSPACE/.github/workflows/setup_llvmpipe.sh
+
+      # Swiftshader      
+      - name: Install Swiftshader
+        run: |
+          mkdir ~/angle && cd ~/angle && curl -fsSL -o angle.zip https://github.com/google/gfbuild-angle/releases/download/github%2Fgoogle%2Fgfbuild-angle%2F96ab6566490495f472cd239997701b201c7a48ac/gfbuild-angle-96ab6566490495f472cd239997701b201c7a48ac-Linux_x64_Debug.zip && unzip angle.zip
+
+      - name: Copy Shadertrap dependencies
+        run:
+          cp ~/angle/lib/libEGL.so ~/angle/lib/libEGL.so.1
+
+      # Install the project
+      - name: Prepare directories
+        run: mkdir glslsmithoutput/ glslsmithoutput/shaders glslsmithoutput/buffers glslsmithoutput/keptshaders glslsmithoutput/keptbuffers
+
+      # Shadertrap Testing
+      - name: Install Shadertrap
+        run: |
+          mkdir ~/shadertrap && cd ~/shadertrap && curl -fsSL -o shadertrap.zip https://github.com/google/gfbuild-shadertrap/releases/download/github%2Fgoogle%2Fgfbuild-shadertrap%2Fb4e8470b3d69ef063b318248ae47e25e3081199c/gfbuild-shadertrap-b4e8470b3d69ef063b318248ae47e25e3081199c-Linux_x64_Release.zip && unzip shadertrap.zip
+      
+      - name: Tests with Shadertrap back-end
+        run: |
+         cd scripts && python -m pytest --cov --ignore graphicsfuzz --config_file=$GITHUB_WORKSPACE/.github/workflows/shadertrap_config.xml
+         
+      # Amber Testing
+      - name: Install Amber
+        if: always()
+        run: |
+          mkdir ~/amber && cd ~/amber && curl -fsSL -o amber.zip https://github.com/google/gfbuild-amber/releases/download/github%2Fgoogle%2Fgfbuild-amber%2F0c514a34280aaf303f6b625b0285513be8cf2d8e/gfbuild-amber-0c514a34280aaf303f6b625b0285513be8cf2d8e-Linux_x64_Debug.zip && unzip amber.zip
+          
+      - name: Prepare Vulkan environment for Amber back-end
+        if: always()
+        run: |
+          echo "LD_LIBRARY_PATH=$VULKAN_SDK/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d" >> $GITHUB_ENV 
+          echo "VK_ICD_FILENAMES=/home/runner/llvmpipe/install/share/vulkan/icd.d/lvp_icd.x86_64.json" >> $GITHUB_ENV
+
+      - name: Test with Amber back-end
+        if: always()
+        run: |
+          cd scripts && python -m pytest --cov --cov-append --ignore graphicsfuzz --config_file=$GITHUB_WORKSPACE/.github/workflows/amber_config.xml
