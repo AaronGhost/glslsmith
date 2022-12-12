@@ -13,11 +13,13 @@
 # limitations under the License.
 import os.path
 import shutil
+import sys
 
 import pytest
 
-from scripts.automate_reducer import get_files_to_reduce, run_reduction, batch_reduction
+from scripts.automate_reducer import get_files_to_reduce, run_reduction, batch_reduction, main
 from scripts.test.conftest import prepare_tmp_env
+from scripts.utils.file_utils import ensure_abs_path
 
 
 @pytest.mark.parametrize("use_kept, test_shader, keptshaders, expected, directory", [
@@ -118,7 +120,6 @@ def test_batch_reduction(capsys, mocker, conf, tmpdir, files_to_reduce, simulate
 
         # Define a function to generate the output files
         def fake_run_reduction(*args, **kwargs):
-            print("Running reduction")
             if simulate_success:
                 with open(execdirs.execdir + "test_reduced" + conf["shadertools"][0].file_extension, "w") as g:
                     g.write("")
@@ -133,5 +134,61 @@ def test_batch_reduction(capsys, mocker, conf, tmpdir, files_to_reduce, simulate
         pytest.mark.skip("No test for Amber")
 
 
-def test_main():
-    pass
+@pytest.mark.parametrize("files, use_execdir, expected", [
+    (["test_42.shadertrap"], True, ["test_42.shadertrap", "test_42_re.shadertrap"]),
+    (["test.shadertrap", "test2.shadertrap"], False,
+     ["test.shadertrap", "test2.shadertrap", "test_re.shadertrap", "test2_re.shadertrap"])
+])
+def test_main(conf, mocker, files, use_execdir, expected):
+    script_location = os.getcwd()
+    try:
+        # Can't use the prepare_tmp_env function because we load the configuration file
+        execdirs = conf["exec_dirs"]
+        keptshaders = ensure_abs_path(execdirs.execdir, execdirs.keptshaderdir)
+        print(keptshaders)
+
+        def fake_run_reduction(*args, **kwargs):
+            with open(execdirs.execdir + "test_reduced" + conf["shadertools"][0].file_extension, "w") as g:
+                g.write("")
+
+        # Mock the inner run_reduction function
+        mocker.patch("scripts.automate_reducer.run_reduction", side_effect=fake_run_reduction)
+
+        if use_execdir:
+            # Create the test files in the execdir
+            for f in files:
+                with open(execdirs.execdir + f, "w") as g:
+                    g.write("")
+            try:
+                # Run the main function
+                sys.argv = ["automate_reducer.py", "--config-file", conf["conf_path"], "--test-file-name", "test_42.shadertrap"]
+                main()
+
+            finally:
+                assert all([os.path.isfile(execdirs.execdir + f) for f in expected])
+                # Clean the execdir
+                for f in expected:
+                    if os.path.isfile(execdirs.execdir + f):
+                        os.remove(execdirs.execdir + f)
+
+        else:
+            # Create the test files in the keptshaderdir
+            for f in files:
+                with open(keptshaders + f, "w") as g:
+                    g.write("")
+
+            try:
+                # Run the main function
+                sys.argv = ["automate_reducer.py", "--config-file", conf["conf_path"], "--batch-reduction"]
+                main()
+
+            finally:
+                assert all([os.path.isfile(keptshaders + f) for f in expected])
+                # Clean the keptshaderdir
+                for f in expected:
+                    print(keptshaders + f)
+                    if os.path.isfile(keptshaders + f):
+                        os.remove(keptshaders + f)
+
+    finally:
+        os.chdir(script_location)

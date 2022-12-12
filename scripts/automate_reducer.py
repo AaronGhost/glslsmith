@@ -32,7 +32,6 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool,
                     double_run=False):
     reduction_input = exec_dirs.execdir + "test_to_reduce" + shader_tool.file_extension
     reduction_output = exec_dirs.execdir + "test_reduced" + shader_tool.file_extension
-    print("Reducing " + str(len(files_to_reduce)) + " shaders")
     for file in files_to_reduce:
         # copy file to exec_dir
         file_name = file.split("/")[-1].split(".")[0]
@@ -133,7 +132,7 @@ def get_files_to_reduce(reduce_keptshaders, test_file, keptshaderdir):
                     files_to_reduce.remove(not_reduced_file)
 
         # Return full path names
-        return map(lambda x: keptshaderdir + x, files_to_reduce)
+        return list(map(lambda x: keptshaderdir + x, files_to_reduce))
 
     else:
         return [test_file]
