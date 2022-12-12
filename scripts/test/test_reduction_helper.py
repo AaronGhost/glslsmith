@@ -104,7 +104,6 @@ def test_main(conf):
     if conf["shadertools"][0].name == "shadertrap":
         test_file = "test_identical.shadertrap"
         copied_file = "testdata/shadertrap_shaders/shader_1.shadertrap"
-        print(os.getcwd())
     elif conf["shadertools"][0].name == "amber":
         test_file = "test_identical.amber"
         copied_file = "testdata/amber_shaders/shader_1.amber"
