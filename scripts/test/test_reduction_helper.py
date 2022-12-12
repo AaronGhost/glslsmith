@@ -101,18 +101,21 @@ def test_execute_reduction(tmpdir, conf, mocker, compilers_dict, results, buffer
 def test_main(conf):
     test_file = ""
     copied_file = ""
-    if conf["shadertools"][0] == "shadertrap":
+    if conf["shadertools"][0].name == "shadertrap":
         test_file = "test_identical.shadertrap"
         copied_file = "testdata/shadertrap_shaders/shader_1.shadertrap"
-    elif conf["shadertools"][0] == "amber":
+        print(os.getcwd())
+    elif conf["shadertools"][0].name == "amber":
         test_file = "test_identical.amber"
         copied_file = "testdata/amber_shaders/shader_1.amber"
     else:
         pytest.mark.skip("Unknown shader tool")
+        return
     script_location = os.getcwd()
+
     try:
         sys.argv = ["reduction_helper.py", "--shader-name", test_file, "--config-file", conf["conf_path"]]
-        # Copy a shadertrap from the testdata to the execdir
+        # Copy a file from the testdata to the execdir
         shutil.copy(copied_file, conf["exec_dirs"].execdir + test_file)
         # Execute the function expecting a SystemExit
         with pytest.raises(SystemExit) as e:
