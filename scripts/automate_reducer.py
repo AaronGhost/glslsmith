@@ -30,12 +30,13 @@ from utils.file_utils import clean_files, find_test_file, ensure_abs_path
 
 def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool, ref, reduce_timeout=False,
                     double_run=False):
+    reduction_input = exec_dirs.execdir + "test_to_reduce" + shader_tool.file_extension
+    reduction_output = exec_dirs.execdir + "test_reduced" + shader_tool.file_extension
+    print("Reducing " + str(len(files_to_reduce)) + " shaders")
     for file in files_to_reduce:
         # copy file to exec_dir
         file_name = file.split("/")[-1].split(".")[0]
         reduced_filename = file.replace(shader_tool.file_extension, "_re" + shader_tool.file_extension)
-        reduction_input = exec_dirs.execdir + "test_to_reduce" + shader_tool.file_extension
-        reduction_output = exec_dirs.execdir + "test_reduced" + shader_tool.file_extension
         print("Reduction of " + file)
         shutil.copy(file, reduction_input)
         # run reduction
@@ -48,12 +49,11 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool,
                         reduced_filename)
             # clean exec_dir
             clean_files(exec_dirs.execdir, ["test_to_reduce" + shader_tool.file_extension,
-                                      "test_reduced" + shader_tool.file_extension])
+                                            "test_reduced" + shader_tool.file_extension])
 
 
 def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader_tool, ref, reduce_timeout=False,
                   log_file="reduction.log", double_run=False):
-
     test_input = ensure_abs_path(exec_dirs.execdir, test_input)
     test_output = ensure_abs_path(exec_dirs.execdir, test_output)
     log_file = ensure_abs_path(exec_dirs.execdir, log_file)

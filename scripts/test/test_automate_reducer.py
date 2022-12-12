@@ -16,7 +16,7 @@ import shutil
 
 import pytest
 
-from scripts.automate_reducer import get_files_to_reduce, run_reduction
+from scripts.automate_reducer import get_files_to_reduce, run_reduction, batch_reduction
 from scripts.test.conftest import prepare_tmp_env
 
 
@@ -57,7 +57,7 @@ def test_get_files_to_reduce(tmpdir, conf, use_kept, test_shader, keptshaders, e
 def test_run_reduction(conf, tmpdir, mocker, capsys, error_code, expect_reduction, success, message):
     execdirs = prepare_tmp_env(conf["exec_dirs"], tmpdir)
 
-    def fake_reduction():
+    def fake_reduction(*args, **kwargs):
         if success:
             with open(execdirs.execdir + conf["reducers"][0].output_files, "w") as f:
                 f.write("")
@@ -75,9 +75,9 @@ def test_run_reduction(conf, tmpdir, mocker, capsys, error_code, expect_reductio
         return
 
     # Mock the creation of the reduction script for miscompilation
-    mocker.patch("automate_reducer.create_shell_code.build_shell_test", return_value=str(error_code))
+    mocker.patch("scripts.automate_reducer.create_shell_code.build_shell_test", return_value=str(error_code))
     # Mock the execution of the reduction script
-    mocker.patch("automate_reducer.subprocess.run", side_effect=fake_reduction())
+    mocker.patch("scripts.automate_reducer.subprocess.run", side_effect=fake_reduction)
     # Copy the test shader to the execdir
     shutil.copy(copied_file, test_input)
     # Generate a fake interesting script
@@ -99,8 +99,38 @@ def test_run_reduction(conf, tmpdir, mocker, capsys, error_code, expect_reductio
         assert message in capsys.readouterr().out
 
 
-def test_batch_reduction():
-    pass
+@pytest.mark.parametrize("files_to_reduce, simulate_success, expected", [
+    (["test.shadertrap"], True, ["test.shadertrap", "test_re.shadertrap"]),
+    (["test.shadertrap", "test2.shadertrap"], False, ["test.shadertrap", "test2.shadertrap"]),
+    (["test.shadertrap", "test2.shadertrap"], True,
+     ["test.shadertrap", "test2.shadertrap", "test_re.shadertrap", "test2_re.shadertrap"]),
+])
+def test_batch_reduction(capsys, mocker, conf, tmpdir, files_to_reduce, simulate_success, expected):
+    if conf["shadertools"][0].name == "shadertrap":
+        execdirs = prepare_tmp_env(conf["exec_dirs"], tmpdir)
+
+        files_to_reduce = list(map(lambda x: execdirs.keptshaderdir + x, files_to_reduce))
+
+        # Generate fake inputs
+        for shader in files_to_reduce:
+            with open(shader, "w") as f:
+                f.write("")
+
+        # Define a function to generate the output files
+        def fake_run_reduction(*args, **kwargs):
+            print("Running reduction")
+            if simulate_success:
+                with open(execdirs.execdir + "test_reduced" + conf["shadertools"][0].file_extension, "w") as g:
+                    g.write("")
+
+        # Mock the inner run_reduction function
+        mocker.patch("scripts.automate_reducer.run_reduction", side_effect=fake_run_reduction)
+        batch_reduction(conf["reducers"][0], conf["compilers"], execdirs, files_to_reduce, conf["shadertools"][0], -1)
+        # Test that the correct file exist in the keptshaderdir
+        assert len(os.listdir(execdirs.keptshaderdir)) == len(expected)
+        assert all([os.path.isfile(execdirs.keptshaderdir + f) for f in expected])
+    else:
+        pytest.mark.skip("No test for Amber")
 
 
 def test_main():
