@@ -99,8 +99,6 @@ def test_execute_reduction(tmpdir, conf, mocker, compilers_dict, results, buffer
 
 
 def test_main(conf):
-    test_file = ""
-    copied_file = ""
     if conf["shadertools"][0].name == "shadertrap":
         test_file = "test_identical.shadertrap"
         copied_file = "testdata/shadertrap_shaders/shader_1.shadertrap"

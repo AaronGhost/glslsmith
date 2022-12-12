@@ -21,11 +21,11 @@ void main()
 }
 END
 
-BUFFER buffer_0 DATA_TYPE uint32 DATA
+BUFFER buffer_0 DATA_TYPE uint32 DATA # DATA_SIZE 6
 0 0 0 0 0 0
 END
 
-BUFFER buffer_ids DATA_TYPE int32 DATA
+BUFFER buffer_ids DATA_TYPE int32 DATA # DATASIZE 1
 0
 END
 

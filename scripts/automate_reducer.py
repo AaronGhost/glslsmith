@@ -25,7 +25,7 @@ from datetime import timedelta
 import create_shell_code
 import splitter_merger
 from utils.execution_utils import env_setup
-from utils.file_utils import clean_files, find_test_file
+from utils.file_utils import clean_files, find_test_file, ensure_abs_path
 
 
 def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool, ref, reduce_timeout=False,
@@ -54,16 +54,22 @@ def batch_reduction(reducer, compilers, exec_dirs, files_to_reduce, shader_tool,
 def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader_tool, ref, reduce_timeout=False,
                   log_file="reduction.log", double_run=False):
 
+    test_input = ensure_abs_path(exec_dirs.execdir, test_input)
+    test_output = ensure_abs_path(exec_dirs.execdir, test_output)
+    log_file = ensure_abs_path(exec_dirs.execdir, log_file)
+    input_file = ensure_abs_path(exec_dirs.execdir, reducer.input_file)
+    output_file = ensure_abs_path(exec_dirs.execdir, reducer.output_files)
     original_test_files = find_test_file(exec_dirs.execdir)
     # Provides log file location
     error_code_str = create_shell_code.build_shell_test(compilers, exec_dirs, shader_tool,
                                                         test_input,
-                                                        reducer.input_file, ref, reducer.interesting_test,
+                                                        input_file, ref,
+                                                        exec_dirs.execdir + reducer.interesting_test,
                                                         double_run=double_run, log_name=log_file)
 
     # Ensure the interestingness test is executable
-    interesting_test_stat = os.stat(reducer.interesting_test)
-    os.chmod(reducer.interesting_test, interesting_test_stat.st_mode | stat.S_IEXEC)
+    interesting_test_stat = os.stat(exec_dirs.execdir + reducer.interesting_test)
+    os.chmod(exec_dirs.execdir + reducer.interesting_test, interesting_test_stat.st_mode | stat.S_IEXEC)
 
     # Parse the error code from the interestingness test
     error_code = int(error_code_str[:4])
@@ -78,13 +84,13 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
 
         # Generate extra necessary files when using glsl-reduce
         if reducer.name == "glsl-reduce":
-            json_file = open(reducer.input_file.split(".")[0] + ".json", "w")
+            json_file = open(input_file.split(".")[0] + ".json", "w")
             json_file.write("{}")
             json_file.close()
-            temp_files.append(reducer.input_file.split(".")[0] + ".json")
+            temp_files.append(input_file.split(".")[0] + ".json")
 
         # Extract the shader code using the splitter and name it as input_file
-        splitter_merger.split(shader_tool, test_input, reducer.input_file)
+        splitter_merger.split(shader_tool, test_input, input_file)
 
         # Perform the reduction using the reduction launch command
         ref_timestamp = time.time()
@@ -98,10 +104,10 @@ def run_reduction(reducer, compilers, exec_dirs, test_input, test_output, shader
         temp_files = list(set(temp_files) - set(original_test_files))
 
         # Check results
-        if os.path.isfile(reducer.output_files):
+        if os.path.isfile(output_file):
             # Merge the shader code with the harness
-            splitter_merger.merge(shader_tool, test_output, reducer.output_files)
-            temp_files.remove(test_output)
+            splitter_merger.merge(shader_tool, test_output, output_file)
+            temp_files.remove(test_output.split("/")[-1])
             end_timestamp = time.time()
             delta = timedelta(seconds=end_timestamp - ref_timestamp)
             print("Reduction finished in " + str(delta))
