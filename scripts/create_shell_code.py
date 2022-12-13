@@ -15,6 +15,7 @@ import argparse
 import os
 
 import reduction_helper
+from utils.file_utils import ensure_abs_path
 from utils.execution_utils import env_setup
 
 
@@ -44,15 +45,24 @@ def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shade
                      double_run=False,
                      log_name="reduction.log"):
     # Collect error code from the reduction process
+    shell_file = ensure_abs_path(exec_dirs.execdir, shell_file)
     try:
         reduction_helper.execute_reduction(compilers_dict, exec_dirs, shader_tool, harness_name, ref, True,
                                            double_run=double_run, postprocessing=True)
     except SystemExit as e:
         error_code = str(e)
         print(error_code)
+
+        # We can use relative path everywhere except for the shell script
+        log_name = os.path.basename(log_name)
+        harness_name = os.path.basename(harness_name)
+        shader_name = os.path.basename(shader_name)
+
+        # Write the shell script
         if error_code != "0":
             print("Detected error code: " + error_code)
-            shell = open(exec_dirs.execdir + shell_file, 'w')
+
+            shell = open(shell_file, 'w')
             # Sets execution conditions
             shell.write("#!/usr/bin/env bash\n" +
                         "set -o pipefail\n" +
@@ -67,7 +77,7 @@ def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shade
                         "SHADER=$(pwd)\"/" + shader_name + "\"\n" +
                         "else\n" +
                         "SHADER_ROOT=$(echo $1 | sed -e 's/\\.[^.]*$//')\n" +
-                        "SHADER=\"${SHADER_ROOT}.comp.glsl\"\n" +
+                        "SHADER=\"${SHADER_ROOT}.comp\"\n" +
                         "fi\n")
             # Logging
             shell.write("python3 ${ROOT}/scripts/benchmark_helper.py --log ${ROOT}/" + log_name + "\n")
@@ -81,7 +91,7 @@ def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shade
             shell.write(
                 "python3 ${ROOT}/scripts/splitter_merger.py --config-file ${ROOT}/scripts/config.xml --host "
                 + shader_tool.name + " --merge " + "${ROOT}/"
-                + harness_name + " $SHADER\"\n")
+                + harness_name + " $SHADER\n")
 
             # Call reduction script to check for error code (eventually with double-run)
             # TODO use only restricted compiler set
@@ -95,7 +105,7 @@ def build_shell_test(compilers_dict, exec_dirs, shader_tool, harness_name, shade
 
             # Check returned code
             shell.write("echo $ERROR_CODE_IN_FILE\n" +
-                        "if [ \"$ERROR_CODE_IN_FILE\" == \"$ERROR_CODE\" ]\n)" +
+                        "if [ \"$ERROR_CODE_IN_FILE\" == \"$ERROR_CODE\" ]\n" +
                         "then\n" +
                         "    exit 0\n" +
                         "else\n" +

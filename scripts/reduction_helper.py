@@ -100,7 +100,6 @@ def execute_reduction(compilers_dict, exec_dirs, shader_tool, shader_name, ref="
         clean_files(exec_dirs.execdir, find_compiler_buffer_file(exec_dirs.execdir, compilers_dict))
         clean_files(exec_dirs.execdir, ["tmp" + shader_tool.file_extension])
 
-    sys.stderr.write(str(error_code))
     if error_code == "0":
         print("No difference between shaders")
         exit(0)

@@ -151,7 +151,7 @@ def exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, seed, shader
 
     # reduce with the default reducer if specified
     if reduce:
-        automate_reducer.batch_reduction(reducer, compilers_dict, exec_dirs, identified_shaders, shader_tool, -1)
+        automate_reducer.batch_reduction(reducer, compilers_dict, exec_dirs, identified_shaders, shader_tool)
 
 
 def main():
