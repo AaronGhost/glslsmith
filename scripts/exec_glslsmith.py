@@ -25,7 +25,7 @@ from utils.file_utils import find_compiler_buffer_file, clean_files
 
 
 def validate_compiler(exec_dir, compiler, shader_tool):
-    shutil.copy(os.path.dirname(os.path.realpath(__file__)) + "/empty.shadertrap", exec_dir)
+    shutil.copy(exec_dir + "scripts/empty.shadertrap", exec_dir)
     crash, timeout, message = single_compile(exec_dir, compiler, exec_dir + "/empty.shadertrap",
                                              shader_tool)
     clean_files(exec_dir, ["empty.shadertrap"])
