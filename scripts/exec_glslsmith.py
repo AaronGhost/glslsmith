@@ -191,6 +191,7 @@ def main():
         batch_nb += 1
         exec_glslsmith(exec_dirs, compilers_dict, reducer, shader_tool, ns.seed, ns.shadercount, ns.syntaxonly,
                        ns.reduce, ns.double_run, ns.glsl_only)
+        print("Finished with batch " + str(batch_nb))
 
 
 if __name__ == "__main__":
