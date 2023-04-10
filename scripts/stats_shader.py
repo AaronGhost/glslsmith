@@ -15,8 +15,8 @@
 import argparse
 import re
 
-from scripts.utils.execution_utils import env_setup, call_glslsmith_reconditioner
-from scripts.utils.file_utils import clean_files
+from utils.execution_utils import env_setup, call_glslsmith_reconditioner
+from utils.file_utils import clean_files
 from splitter_merger import split
 
 
